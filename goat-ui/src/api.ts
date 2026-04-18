@@ -20,6 +20,7 @@ export const api = {
   sell: (id: string, body: any) => request<any>(`/goats/${id}/sell`, { method: 'POST', body: JSON.stringify(body) }),
   markDead: (id: string, body: any) => request<any>(`/goats/${id}/dead`, { method: 'POST', body: JSON.stringify(body) }),
   slaughter: (id: string, body: any) => request<any>(`/goats/${id}/slaughter`, { method: 'POST', body: JSON.stringify(body) }),
+  deleteGoat: (id: string) => request<any>(`/goats/${id}`, { method: 'DELETE' }),
   getLogs: (id: string) => request<any[]>(`/goats/${id}/logs`),
   getChildren: (id: string) => request<any[]>(`/goats/${id}/children`),
 };

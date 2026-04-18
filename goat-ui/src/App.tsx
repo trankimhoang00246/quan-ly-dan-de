@@ -1,24 +1,33 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, Container, CssBaseline } from '@mui/material';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 import GoatListPage from './pages/GoatListPage';
-import './App.css';
 
-function Nav() {
-  return (
-    <nav style={{ marginBottom: 24, padding: '12px 0', borderBottom: '2px solid #e5e7eb', display: 'flex', alignItems: 'center', gap: 20 }}>
-      <span style={{ fontWeight: 700, fontSize: 18 }}>Quản Lý Đàn Dê</span>
-    </nav>
-  );
-}
+const theme = createTheme({
+  palette: {
+    primary: { main: '#16a34a' },
+    secondary: { main: '#ea580c' },
+  },
+});
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 20px', fontFamily: 'Arial, sans-serif' }}>
-        <Nav />
-        <Routes>
-          <Route path="/" element={<GoatListPage />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <BrowserRouter>
+        <AppBar position="static" color="primary" elevation={2}>
+          <Toolbar>
+            <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: 1 }}>
+              🐐 Quản Lý Đàn Dê
+            </Typography>
+          </Toolbar>
+        </AppBar>
+        <Container maxWidth="xl" sx={{ mt: 3, mb: 4 }}>
+          <Routes>
+            <Route path="/" element={<GoatListPage />} />
+          </Routes>
+        </Container>
+      </BrowserRouter>
+    </ThemeProvider>
   );
 }

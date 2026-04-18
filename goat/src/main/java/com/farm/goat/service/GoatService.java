@@ -116,6 +116,16 @@ public class GoatService {
         return goat;
     }
 
+    public void deleteGoat(String id) {
+        Goat goat = getGoat(id);
+        List<Goat> children = goatRepo.findByFatherIdOrMotherIdOrderByCreatedAtDesc(id, id);
+        if (!children.isEmpty()) {
+            throw new RuntimeException("Không thể xóa dê đang có " + children.size() + " con");
+        }
+        logRepo.deleteByGoatId(goat.getId());
+        goatRepo.deleteById(id);
+    }
+
     public List<Goat> getChildren(String id) {
         return goatRepo.findByFatherIdOrMotherIdOrderByCreatedAtDesc(id, id);
     }

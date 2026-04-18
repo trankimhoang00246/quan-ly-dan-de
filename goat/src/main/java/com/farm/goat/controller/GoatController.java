@@ -87,6 +87,16 @@ public class GoatController {
         }
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteGoat(@PathVariable String id) {
+        try {
+            goatService.deleteGoat(id);
+            return ResponseEntity.ok(Map.of("message", "Đã xóa dê thành công"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping("/{id}/children")
     public List<Goat> getChildren(@PathVariable String id) {
         return goatService.getChildren(id);

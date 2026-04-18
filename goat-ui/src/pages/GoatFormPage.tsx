@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import {
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  Button, IconButton, TextField, Stack, Alert,
+  FormControl, FormLabel, RadioGroup, FormControlLabel, Radio,
+  Select, MenuItem, InputLabel,
+} from '@mui/material';
+import CloseIcon from '@mui/icons-material/Close';
 
 interface Props {
   onClose: () => void;
@@ -8,31 +15,21 @@ interface Props {
 
 export default function GoatFormModal({ onClose, onSuccess }: Props) {
   const [form, setForm] = useState({
-    code: '',
-    gender: 'MALE',
-    label: 'BUON',
-    currentWeight: '',
-    capital: '',
-    fatherId: '',
-    motherId: '',
-    note: '',
+    code: '', gender: 'MALE', label: 'BUON',
+    currentWeight: '', capital: '', fatherId: '', motherId: '', note: '',
   });
-  const [goats, setGoats] = useState<any[]>([]);
+  const [goats, setGoats] = useState<{ id: string; code: string; gender: string }[]>([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    api.getHerdGoats().then(setGoats).catch(() => {});
-  }, []);
+  useEffect(() => { api.getHerdGoats().then(setGoats).catch(() => {}); }, []);
 
   const hasParen = form.fatherId || form.motherId;
 
   const set = (k: string, v: string) => {
     setForm(f => {
       const next = { ...f, [k]: v };
-      if ((k === 'fatherId' || k === 'motherId') && (next.fatherId || next.motherId)) {
-        next.capital = '0';
-      }
+      if ((k === 'fatherId' || k === 'motherId') && (next.fatherId || next.motherId)) next.capital = '0';
       return next;
     });
   };
@@ -44,111 +41,99 @@ export default function GoatFormModal({ onClose, onSuccess }: Props) {
     setSaving(true);
     try {
       const goat = await api.createGoat({
-        code: form.code.trim(),
-        gender: form.gender,
-        label: form.label,
+        code: form.code.trim(), gender: form.gender, label: form.label,
         currentWeight: form.currentWeight ? Number(form.currentWeight) : null,
         capital: form.capital ? Number(form.capital) : 0,
-        fatherId: form.fatherId || null,
-        motherId: form.motherId || null,
+        fatherId: form.fatherId || null, motherId: form.motherId || null,
         note: form.note.trim() || null,
       });
       onSuccess(goat.id);
-    } catch (e: any) {
-      setError(e.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (e: unknown) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setSaving(false); }
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
-      <div style={{ background: '#fff', borderRadius: 8, padding: 28, width: 560, maxWidth: '95vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          <h2 style={{ margin: 0 }}>Thêm dê mới</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b7280' }}>✕</button>
-        </div>
+    <Dialog open fullWidth maxWidth="sm" onClose={onClose}>
+      <DialogTitle>
+        <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>Thêm dê mới</span>
+          <IconButton size="small" onClick={onClose}><CloseIcon /></IconButton>
+        </Stack>
+      </DialogTitle>
+      <form onSubmit={handleSubmit}>
+        <DialogContent dividers>
+          <Stack spacing={2.5}>
+            {error && <Alert severity="error">{error}</Alert>}
 
-        {error && <p style={{ color: 'red', marginBottom: 12 }}>{error}</p>}
+            <TextField
+              label="Mã số *" size="small" fullWidth
+              value={form.code} onChange={e => set('code', e.target.value)}
+              placeholder="VD: D001"
+            />
 
-        <form onSubmit={handleSubmit}>
-          <Row label="Mã số *">
-            <input value={form.code} onChange={e => set('code', e.target.value)} style={inputStyle} placeholder="VD: D001" />
-          </Row>
+            <FormControl>
+              <FormLabel>Giới tính</FormLabel>
+              <RadioGroup row value={form.gender} onChange={e => set('gender', e.target.value)}>
+                <FormControlLabel value="MALE" control={<Radio size="small" />} label="Đực" />
+                <FormControlLabel value="FEMALE" control={<Radio size="small" />} label="Cái" />
+              </RadioGroup>
+            </FormControl>
 
-          <Row label="Giới tính">
-            <label style={{ marginRight: 20 }}>
-              <input type="radio" checked={form.gender === 'MALE'} onChange={() => set('gender', 'MALE')} /> Đực
-            </label>
-            <label>
-              <input type="radio" checked={form.gender === 'FEMALE'} onChange={() => set('gender', 'FEMALE')} /> Cái
-            </label>
-          </Row>
+            <FormControl>
+              <FormLabel>Nhãn</FormLabel>
+              <RadioGroup row value={form.label} onChange={e => set('label', e.target.value)}>
+                <FormControlLabel value="BUON" control={<Radio size="small" />} label="Buôn" />
+                <FormControlLabel value="GIONG" control={<Radio size="small" />} label="Giống" />
+              </RadioGroup>
+            </FormControl>
 
-          <Row label="Nhãn">
-            <label style={{ marginRight: 20 }}>
-              <input type="radio" checked={form.label === 'BUON'} onChange={() => set('label', 'BUON')} /> Buôn
-            </label>
-            <label>
-              <input type="radio" checked={form.label === 'GIONG'} onChange={() => set('label', 'GIONG')} /> Giống
-            </label>
-          </Row>
+            <TextField
+              label="Cân hiện tại (kg)" size="small" fullWidth type="number"
+              value={form.currentWeight} onChange={e => set('currentWeight', e.target.value)}
+              slotProps={{ htmlInput: { step: 0.1, min: 0 } }}
+            />
 
-          <Row label="Cân hiện tại (kg)">
-            <input type="number" step="0.1" min="0" value={form.currentWeight} onChange={e => set('currentWeight', e.target.value)} style={inputStyle} placeholder="kg" />
-          </Row>
+            <FormControl size="small" fullWidth>
+              <InputLabel>Cha</InputLabel>
+              <Select label="Cha" value={form.fatherId} onChange={e => set('fatherId', e.target.value)}>
+                <MenuItem value="">-- Không có --</MenuItem>
+                {goats.filter(g => g.gender === 'MALE').map(g => (
+                  <MenuItem key={g.id} value={g.id}>{g.code}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-          <Row label="Cha (mã số)">
-            <select value={form.fatherId} onChange={e => set('fatherId', e.target.value)} style={inputStyle}>
-              <option value="">-- Không có --</option>
-              {goats.filter(g => g.gender === 'MALE').map(g => (
-                <option key={g.id} value={g.id}>{g.code}</option>
-              ))}
-            </select>
-          </Row>
+            <FormControl size="small" fullWidth>
+              <InputLabel>Mẹ</InputLabel>
+              <Select label="Mẹ" value={form.motherId} onChange={e => set('motherId', e.target.value)}>
+                <MenuItem value="">-- Không có --</MenuItem>
+                {goats.filter(g => g.gender === 'FEMALE').map(g => (
+                  <MenuItem key={g.id} value={g.id}>{g.code}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
 
-          <Row label="Mẹ (mã số)">
-            <select value={form.motherId} onChange={e => set('motherId', e.target.value)} style={inputStyle}>
-              <option value="">-- Không có --</option>
-              {goats.filter(g => g.gender === 'FEMALE').map(g => (
-                <option key={g.id} value={g.id}>{g.code}</option>
-              ))}
-            </select>
-          </Row>
+            <TextField
+              label="Vốn (đ)" size="small" fullWidth type="number"
+              value={form.capital} onChange={e => set('capital', e.target.value)}
+              slotProps={{ htmlInput: { min: 0, readOnly: !!hasParen } }}
+              disabled={!!hasParen}
+              helperText={hasParen ? 'Dê đẻ ra = 0đ' : undefined}
+            />
 
-          <Row label="Vốn (đ)">
-            <input type="number" min="0" value={form.capital} onChange={e => set('capital', e.target.value)} style={inputStyle} placeholder="0" readOnly={!!hasParen} />
-            {hasParen && <span style={{ marginLeft: 8, color: '#888', fontSize: 13 }}>(đẻ ra = 0đ)</span>}
-          </Row>
-
-          <Row label="Ghi chú">
-            <textarea value={form.note} onChange={e => set('note', e.target.value)} style={{ ...inputStyle, height: 70, resize: 'vertical' }} />
-          </Row>
-
-          <div style={{ marginTop: 20, display: 'flex', gap: 10 }}>
-            <button type="submit" disabled={saving} style={{ padding: '8px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
-              {saving ? 'Đang lưu...' : 'Lưu'}
-            </button>
-            <button type="button" onClick={onClose} style={{ padding: '8px 16px', cursor: 'pointer' }}>Hủy</button>
-          </div>
-        </form>
-      </div>
-    </div>
+            <TextField
+              label="Ghi chú" size="small" fullWidth multiline rows={2}
+              value={form.note} onChange={e => set('note', e.target.value)}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Hủy</Button>
+          <Button type="submit" variant="contained" color="primary" disabled={saving}>
+            {saving ? 'Đang lưu...' : 'Lưu'}
+          </Button>
+        </DialogActions>
+      </form>
+    </Dialog>
   );
 }
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', marginBottom: 14 }}>
-      <label style={{ width: 140, fontWeight: 500, fontSize: 14 }}>{label}</label>
-      <div style={{ flex: 1 }}>{children}</div>
-    </div>
-  );
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '6px 10px',
-  fontSize: 14,
-  boxSizing: 'border-box',
-};

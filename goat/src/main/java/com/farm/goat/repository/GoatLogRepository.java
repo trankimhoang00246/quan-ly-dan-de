@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface GoatLogRepository extends MongoRepository<GoatLog, String> {
     List<GoatLog> findByGoatIdOrderByCreatedAtDesc(String goatId);
+    void deleteByGoatId(String goatId);
 }

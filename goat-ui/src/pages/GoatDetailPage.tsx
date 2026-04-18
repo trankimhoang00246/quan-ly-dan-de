@@ -1,15 +1,21 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { type Goat, type GoatLog, GENDER_LABEL, LABEL_LABEL, STATUS_LABEL, STATUS_COLOR, ACTION_LABEL } from '../types';
 
 type ModalType = 'weight' | 'sell' | 'dead' | 'slaughter' | null;
 
-export default function GoatDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+interface Props {
+  id: string;
+  onClose: () => void;
+}
+
+export default function GoatDetailModal({ id, onClose }: Props) {
+  const [idStack, setIdStack] = useState<string[]>([id]);
+  const currentId = idStack[idStack.length - 1];
+
   const [goat, setGoat] = useState<Goat | null>(null);
   const [logs, setLogs] = useState<GoatLog[]>([]);
+  const [children, setChildren] = useState<Goat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -20,25 +26,38 @@ export default function GoatDetailPage() {
   const [saving, setSaving] = useState(false);
   const [mError, setMError] = useState('');
 
+  const navigateTo = (targetId: string) => {
+    setIdStack(prev => [...prev, targetId]);
+  };
+
+  const goBack = () => {
+    setIdStack(prev => prev.slice(0, -1));
+  };
+
   const reload = () => {
-    if (!id) return;
     setLoading(true);
-    Promise.all([api.getGoat(id), api.getLogs(id)])
-      .then(([g, l]) => { setGoat(g); setLogs(l); })
+    setError('');
+    Promise.all([api.getGoat(currentId), api.getLogs(currentId), api.getChildren(currentId)])
+      .then(([g, l, c]) => { setGoat(g); setLogs(l); setChildren(c); })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { reload(); }, [id]);
+  useEffect(() => {
+    setGoat(null);
+    setLogs([]);
+    setChildren([]);
+    reload();
+  }, [currentId]);
 
   const openModal = (t: ModalType) => {
     setModal(t); setMWeight(''); setMPrice(''); setMNote(''); setMError('');
   };
 
-  const closeModal = () => setModal(null);
+  const closeActionModal = () => setModal(null);
 
   const handleAction = async () => {
-    if (!id || !modal) return;
+    if (!modal) return;
     setMError('');
     setSaving(true);
     try {
@@ -49,15 +68,15 @@ export default function GoatDetailPage() {
       };
       if (modal === 'weight') {
         if (!mWeight) return setMError('Vui lòng nhập cân nặng');
-        await api.updateWeight(id, { weight: Number(mWeight), note: mNote.trim() || null });
+        await api.updateWeight(currentId, { weight: Number(mWeight), note: mNote.trim() || null });
       } else if (modal === 'sell') {
-        await api.sell(id, body);
+        await api.sell(currentId, body);
       } else if (modal === 'dead') {
-        await api.markDead(id, body);
+        await api.markDead(currentId, body);
       } else if (modal === 'slaughter') {
-        await api.slaughter(id, body);
+        await api.slaughter(currentId, body);
       }
-      closeModal();
+      closeActionModal();
       reload();
     } catch (e: any) {
       setMError(e.message);
@@ -72,76 +91,141 @@ export default function GoatDetailPage() {
   const fmtDate = (s: string) =>
     new Date(s).toLocaleString('vi-VN');
 
-  if (loading) return <p>Đang tải...</p>;
-  if (error) return <p style={{ color: 'red' }}>{error}</p>;
-  if (!goat) return null;
-
-  const isAlive = goat.status === 'ALIVE';
+  const isAlive = goat?.status === 'ALIVE';
 
   return (
-    <div>
-      <button onClick={() => navigate('/')} style={{ marginBottom: 16, cursor: 'pointer' }}>
-        ← Quay lại
-      </button>
-
-      <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 20, marginBottom: 24 }}>
-        <h2 style={{ marginTop: 0 }}>
-          Dê #{goat.code}
-          <span style={{ marginLeft: 14, fontSize: 14, color: STATUS_COLOR[goat.status], fontWeight: 600 }}>
-            [{STATUS_LABEL[goat.status]}]
-          </span>
-        </h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px', fontSize: 14 }}>
-          <Info label="Giới tính" value={GENDER_LABEL[goat.gender]} />
-          <Info label="Nhãn" value={LABEL_LABEL[goat.label]} />
-          <Info label="Cân hiện tại" value={goat.currentWeight != null ? goat.currentWeight + ' kg' : '-'} />
-          <Info label="Vốn" value={fmtMoney(goat.capital)} />
-          <Info label="Cha" value={goat.fatherCode ?? '-'} />
-          <Info label="Mẹ" value={goat.motherCode ?? '-'} />
-          <Info label="Ngày tạo" value={fmtDate(goat.createdAt)} />
-          <Info label="Cập nhật" value={fmtDate(goat.updatedAt)} />
-          {goat.note && <Info label="Ghi chú" value={goat.note} />}
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 998 }}>
+      <div style={{ background: '#fff', borderRadius: 8, padding: 28, width: 740, maxWidth: '96vw', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {idStack.length > 1 && (
+              <button onClick={goBack} style={{ background: 'none', border: '1px solid #d1d5db', borderRadius: 4, padding: '4px 10px', cursor: 'pointer', fontSize: 13, color: '#374151' }}>
+                ← Quay lại
+              </button>
+            )}
+            <h2 style={{ margin: 0 }}>
+              {goat ? `Dê #${goat.code}` : 'Chi tiết dê'}
+              {goat && (
+                <span style={{ marginLeft: 14, fontSize: 14, color: STATUS_COLOR[goat.status], fontWeight: 600 }}>
+                  [{STATUS_LABEL[goat.status]}]
+                </span>
+              )}
+            </h2>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b7280' }}>✕</button>
         </div>
+
+        {loading && <p>Đang tải...</p>}
+        {error && <p style={{ color: 'red' }}>{error}</p>}
+
+        {!loading && !error && goat && (
+          <>
+            <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: 16, marginBottom: 20 }}>
+              <div style={{ marginBottom: 8, fontSize: 12, color: '#6b7280', fontFamily: 'monospace' }}>
+                ID: {goat.id}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px', fontSize: 14 }}>
+                <Info label="Giới tính" value={GENDER_LABEL[goat.gender]} />
+                <Info label="Nhãn" value={LABEL_LABEL[goat.label]} />
+                <Info label="Cân hiện tại" value={goat.currentWeight != null ? goat.currentWeight + ' kg' : '-'} />
+                <Info label="Vốn" value={fmtMoney(goat.capital)} />
+                <div>
+                  <span style={{ color: '#6b7280' }}>Cha: </span>
+                  {goat.fatherId
+                    ? <span onClick={() => navigateTo(goat.fatherId!)} style={linkStyle}>{goat.fatherCode}</span>
+                    : <strong>{goat.fatherCode ?? '-'}</strong>}
+                </div>
+                <div>
+                  <span style={{ color: '#6b7280' }}>Mẹ: </span>
+                  {goat.motherId
+                    ? <span onClick={() => navigateTo(goat.motherId!)} style={linkStyle}>{goat.motherCode}</span>
+                    : <strong>{goat.motherCode ?? '-'}</strong>}
+                </div>
+                <Info label="Ngày tạo" value={fmtDate(goat.createdAt)} />
+                <Info label="Cập nhật" value={fmtDate(goat.updatedAt)} />
+                {goat.note && <Info label="Ghi chú" value={goat.note} />}
+              </div>
+            </div>
+
+            {isAlive && (
+              <div style={{ marginBottom: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                <button onClick={() => openModal('weight')} style={btnStyle('#2563eb')}>Cập nhật cân</button>
+                <button onClick={() => openModal('sell')} style={btnStyle('#16a34a')}>Bán dê</button>
+                <button onClick={() => openModal('dead')} style={btnStyle('#6b7280')}>Dê chết</button>
+                <button onClick={() => openModal('slaughter')} style={btnStyle('#ea580c')}>Làm thịt</button>
+              </div>
+            )}
+
+            {children.length > 0 && (
+              <>
+                <h3 style={{ marginBottom: 10 }}>Danh sách con ({children.length})</h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, marginBottom: 24 }}>
+                  <thead>
+                    <tr style={{ background: '#f3f4f6' }}>
+                      <th style={th}>Mã số</th>
+                      <th style={th}>Giới tính</th>
+                      <th style={th}>Nhãn</th>
+                      <th style={th}>Cân</th>
+                      <th style={th}>Trạng thái</th>
+                      <th style={th}>Ngày sinh</th>
+                      <th style={th}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {children.map(child => (
+                      <tr key={child.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                        <td style={td}><strong>{child.code}</strong></td>
+                        <td style={td}>{GENDER_LABEL[child.gender]}</td>
+                        <td style={td}>{LABEL_LABEL[child.label]}</td>
+                        <td style={td}>{child.currentWeight != null ? child.currentWeight + ' kg' : '-'}</td>
+                        <td style={td}>
+                          <span style={{ color: STATUS_COLOR[child.status], fontWeight: 600 }}>
+                            {STATUS_LABEL[child.status]}
+                          </span>
+                        </td>
+                        <td style={td}>{new Date(child.createdAt).toLocaleDateString('vi-VN')}</td>
+                        <td style={td}>
+                          <button onClick={() => navigateTo(child.id)} style={{ padding: '3px 10px', cursor: 'pointer', fontSize: 12 }}>Xem</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            )}
+
+            <h3 style={{ marginBottom: 10 }}>Lịch sử thao tác</h3>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+              <thead>
+                <tr style={{ background: '#f3f4f6' }}>
+                  <th style={th}>Thời gian</th>
+                  <th style={th}>Hành động</th>
+                  <th style={th}>Cân (kg)</th>
+                  <th style={th}>Tiền (đ)</th>
+                  <th style={th}>Ghi chú</th>
+                </tr>
+              </thead>
+              <tbody>
+                {logs.length === 0 && (
+                  <tr><td colSpan={5} style={{ padding: 16, textAlign: 'center', color: '#888' }}>Chưa có lịch sử</td></tr>
+                )}
+                {logs.map(log => (
+                  <tr key={log.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
+                    <td style={td}>{fmtDate(log.createdAt)}</td>
+                    <td style={td}><strong>{ACTION_LABEL[log.action]}</strong></td>
+                    <td style={td}>{log.weight != null ? log.weight : '-'}</td>
+                    <td style={td}>{log.price != null ? log.price.toLocaleString('vi-VN') : '-'}</td>
+                    <td style={td}>{log.note ?? '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
 
-      {isAlive && (
-        <div style={{ marginBottom: 24, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <button onClick={() => openModal('weight')} style={btnStyle('#2563eb')}>Cập nhật cân</button>
-          <button onClick={() => openModal('sell')} style={btnStyle('#16a34a')}>Bán dê</button>
-          <button onClick={() => openModal('dead')} style={btnStyle('#6b7280')}>Dê chết</button>
-          <button onClick={() => openModal('slaughter')} style={btnStyle('#ea580c')}>Làm thịt</button>
-        </div>
-      )}
-
-      <h3>Lịch sử thao tác</h3>
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
-        <thead>
-          <tr style={{ background: '#f3f4f6' }}>
-            <th style={th}>Thời gian</th>
-            <th style={th}>Hành động</th>
-            <th style={th}>Cân (kg)</th>
-            <th style={th}>Tiền (đ)</th>
-            <th style={th}>Ghi chú</th>
-          </tr>
-        </thead>
-        <tbody>
-          {logs.length === 0 && (
-            <tr><td colSpan={5} style={{ padding: 16, textAlign: 'center', color: '#888' }}>Chưa có lịch sử</td></tr>
-          )}
-          {logs.map(log => (
-            <tr key={log.id} style={{ borderBottom: '1px solid #e5e7eb' }}>
-              <td style={td}>{fmtDate(log.createdAt)}</td>
-              <td style={td}><strong>{ACTION_LABEL[log.action]}</strong></td>
-              <td style={td}>{log.weight != null ? log.weight : '-'}</td>
-              <td style={td}>{log.price != null ? log.price.toLocaleString('vi-VN') : '-'}</td>
-              <td style={td}>{log.note ?? '-'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
       {modal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999 }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
           <div style={{ background: '#fff', borderRadius: 8, padding: 28, minWidth: 360, boxShadow: '0 4px 24px rgba(0,0,0,0.2)' }}>
             <h3 style={{ marginTop: 0 }}>
               {modal === 'weight' && 'Cập nhật cân'}
@@ -151,11 +235,9 @@ export default function GoatDetailPage() {
             </h3>
             {mError && <p style={{ color: 'red', marginBottom: 10 }}>{mError}</p>}
 
-            {(modal === 'weight' || modal === 'sell' || modal === 'dead' || modal === 'slaughter') && (
-              <ModalRow label={modal === 'weight' ? 'Cân nặng mới (kg) *' : 'Cân (kg)'}>
-                <input type="number" step="0.1" min="0" value={mWeight} onChange={e => setMWeight(e.target.value)} style={inputStyle} />
-              </ModalRow>
-            )}
+            <ModalRow label={modal === 'weight' ? 'Cân nặng mới (kg) *' : 'Cân (kg)'}>
+              <input type="number" step="0.1" min="0" value={mWeight} onChange={e => setMWeight(e.target.value)} style={inputStyle} />
+            </ModalRow>
 
             {(modal === 'sell' || modal === 'dead' || modal === 'slaughter') && (
               <ModalRow label="Tiền bán (đ)">
@@ -171,7 +253,7 @@ export default function GoatDetailPage() {
               <button onClick={handleAction} disabled={saving} style={{ padding: '8px 20px', background: '#16a34a', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }}>
                 {saving ? 'Đang lưu...' : 'Xác nhận'}
               </button>
-              <button onClick={closeModal} style={{ padding: '8px 16px', cursor: 'pointer' }}>Hủy</button>
+              <button onClick={closeActionModal} style={{ padding: '8px 16px', cursor: 'pointer' }}>Hủy</button>
             </div>
           </div>
         </div>
@@ -197,6 +279,13 @@ function ModalRow({ label, children }: { label: string; children: React.ReactNod
     </div>
   );
 }
+
+const linkStyle: React.CSSProperties = {
+  cursor: 'pointer',
+  color: '#2563eb',
+  textDecoration: 'underline',
+  fontWeight: 600,
+};
 
 const btnStyle = (bg: string): React.CSSProperties => ({
   padding: '8px 18px',

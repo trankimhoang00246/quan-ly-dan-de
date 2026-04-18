@@ -10,7 +10,9 @@ export interface Goat {
   label: GoatLabel;
   currentWeight: number | null;
   capital: number;
+  fatherId: string | null;
   fatherCode: string | null;
+  motherId: string | null;
   motherCode: string | null;
   status: GoatStatus;
   note: string | null;

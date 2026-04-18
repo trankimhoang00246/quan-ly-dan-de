@@ -23,6 +23,16 @@ public class GoatController {
         return goatService.getAllGoats();
     }
 
+    @GetMapping("/herd")
+    public List<Goat> getHerdGoats() {
+        return goatService.getHerdGoats();
+    }
+
+    @GetMapping("/inactive")
+    public List<Goat> getInactiveGoats() {
+        return goatService.getInactiveGoats();
+    }
+
     @PostMapping
     public ResponseEntity<?> createGoat(@RequestBody CreateGoatRequest req) {
         try {
@@ -75,6 +85,11 @@ public class GoatController {
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
+    }
+
+    @GetMapping("/{id}/children")
+    public List<Goat> getChildren(@PathVariable String id) {
+        return goatService.getChildren(id);
     }
 
     @GetMapping("/{id}/logs")

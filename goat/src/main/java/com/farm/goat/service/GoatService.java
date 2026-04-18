@@ -22,6 +22,14 @@ public class GoatService {
         return goatRepo.findAllByOrderByCreatedAtDesc();
     }
 
+    public List<Goat> getHerdGoats() {
+        return goatRepo.findByStatusOrderByCreatedAtDesc("ALIVE");
+    }
+
+    public List<Goat> getInactiveGoats() {
+        return goatRepo.findByStatusInOrderByUpdatedAtDesc(List.of("SOLD", "DEAD", "SLAUGHTERED"));
+    }
+
     public Goat getGoat(String id) {
         return goatRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy dê: " + id));
@@ -38,23 +46,33 @@ public class GoatService {
         goat.setLabel(req.label());
         goat.setCurrentWeight(req.currentWeight());
         goat.setCapital(req.capital() != null ? req.capital() : 0.0);
-        goat.setFatherCode(req.fatherCode());
-        goat.setMotherCode(req.motherCode());
+        if (req.fatherId() != null) {
+            goatRepo.findById(req.fatherId()).ifPresent(f -> {
+                goat.setFatherId(f.getId());
+                goat.setFatherCode(f.getCode());
+            });
+        }
+        if (req.motherId() != null) {
+            goatRepo.findById(req.motherId()).ifPresent(m -> {
+                goat.setMotherId(m.getId());
+                goat.setMotherCode(m.getCode());
+            });
+        }
         goat.setNote(req.note());
         goat.setStatus("ALIVE");
         goat.setCreatedAt(LocalDateTime.now());
         goat.setUpdatedAt(LocalDateTime.now());
-        goat = goatRepo.save(goat);
+        Goat savedGoat = goatRepo.save(goat);
 
         String logNote = "Tạo mới dê";
-        if (req.fatherCode() != null || req.motherCode() != null) {
-            logNote += " (đẻ từ cha: " + req.fatherCode() + ", mẹ: " + req.motherCode() + ")";
+        if (req.fatherId() != null || req.motherId() != null) {
+            logNote += " (đẻ từ cha: " + savedGoat.getFatherCode() + " [ID: " + savedGoat.getFatherId() + "], mẹ: " + savedGoat.getMotherCode() + " [ID: " + savedGoat.getMotherId() + "])";
         }
         if (req.note() != null && !req.note().isBlank()) {
             logNote += " - " + req.note();
         }
-        saveLog(goat.getId(), "CREATE", req.currentWeight(), req.capital(), logNote);
-        return goat;
+        saveLog(savedGoat.getId(), "CREATE", req.currentWeight(), req.capital(), logNote);
+        return savedGoat;
     }
 
     public Goat updateWeight(String id, UpdateWeightRequest req) {
@@ -96,6 +114,10 @@ public class GoatService {
         goatRepo.save(goat);
         saveLog(id, "SLAUGHTER", req.weight(), req.price(), req.note());
         return goat;
+    }
+
+    public List<Goat> getChildren(String id) {
+        return goatRepo.findByFatherIdOrMotherIdOrderByCreatedAtDesc(id, id);
     }
 
     public List<GoatLog> getLogs(String id) {

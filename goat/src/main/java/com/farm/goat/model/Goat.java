@@ -16,7 +16,9 @@ public class Goat {
     private String label;    // BUON, GIONG
     private Double currentWeight;
     private Double capital;
+    private String fatherId;
     private String fatherCode;
+    private String motherId;
     private String motherCode;
     private String status;   // ALIVE, SOLD, DEAD, SLAUGHTERED
     private String note;

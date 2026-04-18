@@ -6,7 +6,7 @@ public record CreateGoatRequest(
         String label,
         Double currentWeight,
         Double capital,
-        String fatherCode,
-        String motherCode,
+        String fatherId,
+        String motherId,
         String note
 ) {}

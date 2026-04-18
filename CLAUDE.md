@@ -56,7 +56,8 @@ npm run preview   # preview production build
 
 ## Key Domain Concepts
 
-- Each goat has a unique **code** (mã số)
+- Each goat has a unique **code** (mã số), but **code is reusable across goats** — the same code can be assigned to a new goat after the previous one with that code is no longer alive (SOLD/DEAD/SLAUGHTERED)
+- All inter-goat references (e.g. fatherId, motherId) must use the MongoDB **`_id`** field, never the code
 - Goat types: Male (Đực) / Female (Cái), with subtypes Buôn (trading) / Giống (breeding)
 - Goat lifecycle actions: **UpdateWeight**, **Sell**, **Dead**, **Slaughter** — each logged in GoatLog
 - Goats can be created standalone or linked to parent goats (birth registration)

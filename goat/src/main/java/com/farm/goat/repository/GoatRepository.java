@@ -9,5 +9,8 @@ import java.util.Optional;
 public interface GoatRepository extends MongoRepository<Goat, String> {
     boolean existsByCodeAndStatus(String code, String status);
     List<Goat> findAllByOrderByCreatedAtDesc();
+    List<Goat> findByStatusOrderByCreatedAtDesc(String status);
+    List<Goat> findByStatusInOrderByUpdatedAtDesc(List<String> statuses);
     Optional<Goat> findByCodeAndStatus(String code, String status);
+    List<Goat> findByFatherIdOrMotherIdOrderByCreatedAtDesc(String fatherId, String motherId);
 }

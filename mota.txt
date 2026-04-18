@@ -1,0 +1,20 @@
+Tôi đang muốn tạo 1 trang web đơn giản để quản lý đàn dê của tôi 
+
+Mỗi con dê của tôi sẽ có đánh 1 mã số duy nhất 
+
+các chức năng chính: 
+- có 2 loại dê được, cái 
+- các dê có nhãn, dê buôn/dê giống 
+- tạo mới dê: tạo mới, hoặc là tạo mới khi được đẻ từ cha (mã số x) và mẹ (mã số y), số tiền vốn cho con dê này (nếu là mua về), còn nếu là đẻ ra thì là 0 
+- có các nút hành động như: update kg dê hiện tại, bán dê (lúc bán thì cho nhập số tiền bán, số kí) lúc mà bán xong thì mã của con đã bán có thể sử dụng cho dê mới được, dê chết -> ghi tiền bán nếu có, kí nếu có,..., dê làm thịt -> số tiền, số kí,...
+- 1 con dê có thể xem được danh sách log thao tác chi tiết của những lần update chỉnh sửa,... 
+
+dự án có 2 project
+Backend java thư mục goat
+-> hãy kết nối db mongo local -> localhost:27017 -> db: goat nha bạn, không có mật khẩu 
+Frontend react thu mục goat-ui 
+-> đây là dự án local quản lý nội bộ nên k cần làm đẹp chỉ cần thiện lợi dễ dùng là được r 
+
+ - Backend: cd goat && ./gradlew bootRun                                                                 
+  - Frontend: cd goat-ui && npm run dev                                                                   
+  - Mở trình duyệt: http://localhost:5173   

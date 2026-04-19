@@ -1,0 +1,234 @@
+● Goat Farm System — Product & Engineering Evaluation
+
+  ---
+  1. Product Gaps & Weaknesses
+
+  Business Logic
+
+  - Không có lợi nhuận theo từng con dê. Vốn được lưu, doanh thu có khi bán/mổ, nhưng không có màn hình nào
+   tính lãi/lỗ = giá bán - vốn per goat hay per batch.
+  - Lịch sử cân chỉ là log, không thành biểu đồ. Data tăng trưởng cân nặng có đủ trong GoatLog nhưng không
+  được visualize — không biết dê tăng hay giảm cân theo thời gian.
+  - Chích thuốc không có lịch nhắc. Ghi nhận vaccine nhưng không có "lần tiếp theo cần chích" — giá trị
+  thực của feature này bị mất đi 80%.
+  - Không thể lọc theo tiêu chí nào ngoài mã số. Muốn xem tất cả dê Giống còn sống nặng trên 30kg → không
+  làm được.
+  - Không có export. Chủ trại cần báo cáo cho kế toán, cơ quan thú y → không xuất được Excel/PDF.
+
+  UX/Workflow
+
+  - Không có phản hồi sau thao tác. Bán dê xong, form đóng im lặng — không biết thành công hay lỗi nếu
+  không để ý.
+  - Không hiện tag trên danh sách. Thêm feature tag nhưng danh sách không có cột → phải vào chi tiết mới
+  thấy.
+  - Mobile hoàn toàn không dùng được. Table 8 cột + icon buttons nhỏ trên màn hình 390px là unusable. Chủ
+  trại ở ngoài đồng dùng điện thoại là chính.
+  - Không có bulk action. Tiêm vaccine cho 20 con cùng đợt → phải làm từng con một.
+  - Family tree không có tìm kiếm/filter. Với 100+ con, diagram rối, không tìm được con cụ thể.
+
+  Technical
+
+  - Không có authentication. URL public → bất kỳ ai có link đều đọc/sửa/xóa được toàn bộ dữ liệu.
+  - Không có input validation ở backend. Weight âm, price = 0 khi bán, date tương lai đều qua lọt.
+  - Bundle 760KB, không code-split. Người dùng ở nông thôn với 4G yếu phải tải toàn bộ trước khi thấy gì.
+  - Không có error boundary trên frontend. Một component crash → trắng màn hình toàn bộ.
+  - GoatLog.medicine không được tính vào chi phí. Chích thuốc không link với Transaction → báo cáo tài
+  chính thiếu.
+
+  ---
+  2. Prioritized Roadmap
+
+  P1 — High Priority
+
+  1. Toast Notification sau mọi thao tác
+  - Problem: User không biết thao tác thành công hay không sau khi form đóng.
+  - Impact: Giảm thao tác thừa (mở lại để kiểm tra), tăng tin tưởng hệ thống.
+  - Approach: Thêm MUI Snackbar + useSnackbar context 1 lần, dùng lại toàn app. onSuccess callback ở mọi
+  dialog đẩy toast.
+  - Effort: 2–3 giờ
+
+  2. Bộ lọc nâng cao trên danh sách
+  - Problem: Chỉ tìm được theo mã số. Không lọc theo giới tính, nhãn, tag, khoảng cân nặng.
+  - Impact: Quyết định nhanh hơn — "dê cái giống nào nặng nhất để chọn phối giống?" hiện mất 5 phút scroll
+  bằng mắt.
+  - Approach: Thêm filter panel collapsible trên table (MUI). Lọc client-side vì data đã load đủ.
+  - Effort: 1 ngày
+
+  3. Cột Tag + Cân nặng trực quan trên danh sách
+  - Problem: Tag đã có nhưng ẩn trong chi tiết. Cân nặng không cho biết xu hướng.
+  - Impact: Scan nhanh toàn đàn chỉ nhìn danh sách.
+  - Approach: Thêm cột Tag (chip). Thêm icon mũi tên ▲▼ cho cân nặng so với lần cân trước (lấy từ logs).
+  - Effort: 4 giờ
+
+  4. Biểu đồ tăng trưởng cân nặng theo từng con
+  - Problem: GoatLog đã có đầy đủ lịch sử cân nhưng chỉ hiện dạng bảng phẳng.
+  - Impact: Phát hiện dê tăng trưởng kém, dê bệnh (cân giảm liên tục) sớm hơn nhiều.
+  - Approach: Trong GoatDetailPage, thêm tab "Tăng trưởng" dùng recharts (đã có thể đã install qua MUI
+  deps, hoặc nhẹ). Query từ logs filter action = UPDATE_WEIGHT | CREATE, vẽ line chart.
+  - Effort: 1 ngày
+
+  5. Lãi/Lỗ theo từng con dê
+  - Problem: Không biết con nào sinh lời, con nào lỗ. Capital được track nhưng không so với revenue.
+  - Impact: Quyết định bán hay giữ dựa trên số liệu thực, không cảm tính.
+  - Approach: Trong chi tiết dê, tính profit = giá bán (log SELL/SLAUGHTER) - capital. Nếu còn sống: hiện
+  "Giá trị ước tính" dựa trên cân nặng hiện tại (thêm trường giá/kg vào settings). Dashboard thêm widget
+  top 5 dê lãi nhất/lỗ nhất.
+  - Effort: 1 ngày
+
+  ---
+  P2 — Medium Priority
+
+  6. Lịch tiêm vaccine & nhắc nhở
+  - Problem: Biết đã chích gì nhưng không biết khi nào cần chích lại.
+  - Impact: Tránh dịch bệnh, đảm bảo lịch tiêm đúng hạn — giá trị core của chăn nuôi bài bản.
+  - Approach: Thêm field nextDueDate vào ChichThuocRequest. Backend lưu vào GoatLog. Dashboard widget "Dê
+  cần chích trong 7 ngày tới". Tùy chọn: export lịch ra file.                                            
+  - Effort: 2 ngày                                                                                         
+                  
+  7. Bulk Action (tiêm vaccine / cập nhật cân nhiều con)                                                   
+  - Problem: 20 con tiêm cùng đợt = 20 lần mở popup.                                                       
+  - Impact: Tiết kiệm 15–20 phút mỗi lần nhập liệu đợt lớn.                                                
+  - Approach: Checkbox trên danh sách, nút "Thao tác hàng loạt" → popup chọn action + nhập thông tin chung.
+   Backend nhận array goatIds.                                                                             
+  - Effort: 2–3 ngày                                                                                       
+                                                                                                           
+  8. Authentication cơ bản                                                                                 
+  - Problem: Không có auth — URL = toàn quyền truy cập.     
+  - Impact: Bảo vệ dữ liệu kinh doanh. Cần thiết trước khi deploy production thật sự.                      
+  - Approach: Spring Security + JWT. Frontend lưu token vào localStorage. Single user hoặc 2 role
+  (admin/viewer). Không cần OAuth — farm nhỏ, username/password là đủ.                                     
+  - Effort: 2–3 ngày                                                                                       
+                                                                                                           
+  9. Export báo cáo                                                                                        
+  - Problem: Không xuất được dữ liệu cho kế toán, thú y, hoặc backup thủ công.
+  - Impact: Compliance + professional workflow.                                                            
+  - Approach: Backend endpoint /api/export?type=goats&from=&to= trả về CSV/Excel (Apache POI). Frontend nút
+   "Xuất Excel". Ưu tiên: danh sách đàn, lịch sử giao dịch.                                                
+  - Effort: 2 ngày                                                                                         
+  
+  ---                                                                                                      
+  P3 — Low Priority (nhưng đáng làm)                        
+                                                                                                           
+  10. Mobile-first layout cho trang danh sách
+  - Responsive card view thay table khi width < 600px                                                      
+  - Swipe actions (MUI SwipeableDrawer) cho nhanh                                                          
+                                                                                                           
+  11. Chi phí vaccine liên kết Transaction                                                                 
+  - Khi chích thuốc, tự tạo 1 Transaction loại EXPENSE với tên thuốc + ngày                                
+                                                                                                           
+  12. Settings page: giá thị trường/kg                                                                     
+  - Nhập giá dê hơi hiện tại → hệ thống tự ước tính giá trị đàn dê                                         
+                                                                                                           
+  ---                                                                                                      
+  3. Quick Wins (< 1 tuần)                                                                                 
+                                                                                                           
+  ┌─────┬────────────────────────────────────────────┬────────┐
+  │  #  │                  Việc làm                  │ Effort │                                            
+  ├─────┼────────────────────────────────────────────┼────────┤
+  │ 1   │ Toast notification toàn app                │ 2–3h   │
+  ├─────┼────────────────────────────────────────────┼────────┤
+  │ 2   │ Hiện cột Tag trên danh sách                │ 1h     │                                            
+  ├─────┼────────────────────────────────────────────┼────────┤                                            
+  │ 3   │ Filter: giới tính, nhãn, tag (client-side) │ 4h     │                                            
+  ├─────┼────────────────────────────────────────────┼────────┤                                            
+  │ 4   │ Lãi/lỗ đơn giản trong chi tiết dê          │ 3h     │
+  ├─────┼────────────────────────────────────────────┼────────┤                                            
+  │ 5   │ Validation backend: weight > 0, price >= 0 │ 2h     │
+  ├─────┼────────────────────────────────────────────┼────────┤                                            
+  │ 6   │ Error boundary React toàn app              │ 1h     │
+  └─────┴────────────────────────────────────────────┴────────┘                                            
+                                                            
+  ---                                                                                                      
+  4. High-Impact Improvements (dài hạn)                     
+                                       
+  Biểu đồ tăng trưởng cân nặng là feature có giá trị nghiệp vụ cao nhất hiện tại vì data đã có sẵn — chỉ
+  cần visualize. Một line chart đơn giản với recharts có thể thay đổi hoàn toàn cách chủ trại theo dõi đàn.
+  
+  Lịch vaccine + nhắc nhở là feature tạo thói quen dùng app hàng ngày — không chỉ dùng khi có sự kiện. Đây 
+  là yếu tố giữ chân user.                                  
+                                                                                                           
+  Authentication là prerequisite để farm thực sự dùng production mà không lo lộ dữ liệu.                   
+  
+  Mobile layout là prerequisite để chủ trại nhập liệu tại chuồng, không phải ngồi vào máy tính.            
+                                                            
+  ---                                                                                                      
+  5. UI/UX Improvements                                     
+                                                                                                           
+  Ngay lập tức:
+  - Thêm Snackbar success/error sau mọi action — hiện tại im lặng hoàn toàn                                
+  - Hiện số liệu tóm tắt ngay trên mỗi hàng danh sách: tag chip + cân nặng + ngày cân gần nhất             
+  - Nút "Thêm dê mới" nên fixed bottom-right trên mobile (FAB button)                         
+  - Empty state có hướng dẫn khi chưa có dê nào                                                            
+                                                                                                           
+  Dashboard:                                                                                               
+  - Widget "Cần chú ý": dê chưa cân > 30 ngày, dê cần vaccine                                              
+  - So sánh tháng này vs tháng trước cho doanh thu/chi phí                                                 
+  - Tổng lãi/lỗ kỳ hiện tại                                                                                
+                                                                                                           
+  Workflow:                                                                                                
+  - Sau khi tạo dê → prompt "Thêm con khác?" (common workflow: nhập cả lứa)                                
+  - Trong family tree, highlight path từ con lên ông bà (click 1 node → ancestors glow)                    
+  - Search box trong family tree                                                       
+                                                                                                           
+  ---                                                                                                      
+  6. Performance Improvements                                                                              
+                                                                                                           
+  Frontend — vấn đề chính:                                  
+                                                                                                           
+  1. Bundle 760KB không split → First load chậm trên 4G nông thôn.                                         
+    - Lazy load từng route: React.lazy(() => import('./pages/TransactionPage'))                            
+    - GoatFamilyTree với ReactFlow nặng nhất → split riêng, chỉ load khi vào tab Sơ đồ                     
+    - Tiết kiệm ước tính: 30–40% initial bundle                                                            
+  2. Không cache API response → Mỗi lần mở detail modal gọi 3 API calls song song.                         
+    - Dùng SWR hoặc React Query để cache + dedupe requests                                                 
+    - getHerdGoats() được gọi ở nhiều nơi → global cache                                                   
+  3. Family tree render toàn bộ goat → 500 con = 500 ReactFlow nodes, lag rõ.                              
+    - Virtualize: chỉ render nodes trong viewport                                                          
+    - Hoặc giới hạn depth: mặc định hiện 3 thế hệ, expand on demand                                        
+                                                                                                           
+  Backend — vấn đề chính:                                                                                  
+                                                                                                           
+  1. findAllByOrderByCreatedAtDesc() không có index → Full collection scan khi data lớn.                   
+    - Thêm index: { createdAt: -1 }, { status: 1, createdAt: -1 }, { fatherId: 1 }, { motherId: 1 }
+    - Với MongoDB Atlas, tạo qua UI hoặc @CompoundIndex annotation                                         
+  2. Dashboard stats tính toán in-memory → Load tất cả goats + tất cả logs vào Java heap, filter bằng Java 
+  stream.                                                                                                  
+    - Dùng MongoDB aggregation pipeline thay vì Java stream — đẩy tính toán xuống DB                       
+    - Đặc biệt totalRevenue đang query toàn bộ logs SELL+SLAUGHTER rồi filter date bằng Java               
+  3. Không có response compression → Thêm server.compression.enabled=true trong application.properties,    
+  tiết kiệm 60–70% bandwidth cho JSON responses.                                                           
+                                                                                                           
+  ---                                                                                                      
+  7. System / Architecture Improvements                     
+                                       
+  Refactor cần thiết:
+                                                                                                           
+  1. GoatService quá lớn — 200+ dòng, xử lý cả business logic lẫn stats. Tách DashboardService riêng.      
+  2. Frontend không có global error/loading state — Mỗi component tự quản lý loading/error state → code    
+  lặp. Dùng React Query giải quyết cả 2: cache + loading/error unified.                                    
+  3. api.ts dùng any toàn bộ — Mất type safety. Thay bằng typed generics với interface đã có trong
+  types.ts.                                                                                                
+  4. Không có environment config — BASE = '/api' hardcode. Thêm .env file cho dev/prod separation.
+                                                                                                           
+  Scaling strategy cho farm nhỏ (thực tế):                                                                 
+                                                                                                           
+  Hệ thống này với MongoDB Atlas Free Tier (512MB) chịu được ~5,000–10,000 goat records thoải mái. Không   
+  cần scaling phức tạp. Thứ cần làm:                        
+                                                                                                           
+  - Backup định kỳ: Thêm cron job export MongoDB → file JSON → Google Drive (tự động, 1 lần/ngày)          
+  - Rate limiting: Spring Boot bucket4j để chặn abuse nếu có auth rồi
+  - Monitoring đơn giản: Spring Boot Actuator + một dashboard /health để biết app đang sống                
+                                                                                                           
+  Thứ KHÔNG nên làm ở giai đoạn này: microservices, Redis cache, message queue, Kubernetes —               
+  over-engineering cho quy mô farm nhỏ, tốn effort mà không có giá trị thực.                               
+                                                                                                           
+  ---                                                       
+  Tóm tắt ưu tiên thực tế
+                                                                                                           
+  Tuần 1:  Toast + Filter nâng cao + Tag trên list + Validation backend
+  Tuần 2:  Biểu đồ cân nặng + Lãi/lỗ per goat                                                              
+  Tuần 3:  Authentication (JWT)                                                                            
+  Tuần 4:  Lịch vaccine + nhắc nhở                                                                         
+  Tháng 2: Mobile layout + Export Excel + Bulk action                                                      
+                                                                                                           
+✻ Cooked for 1m 55s 

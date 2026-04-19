@@ -54,6 +54,15 @@ public class GoatController {
         }
     }
 
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateGoat(@PathVariable String id, @RequestBody UpdateGoatRequest req) {
+        try {
+            return ResponseEntity.ok(goatService.updateGoat(id, req));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/{id}/weight")
     public ResponseEntity<?> updateWeight(@PathVariable String id, @RequestBody UpdateWeightRequest req) {
         try {
@@ -85,6 +94,15 @@ public class GoatController {
     public ResponseEntity<?> slaughter(@PathVariable String id, @RequestBody SlaughterRequest req) {
         try {
             return ResponseEntity.ok(goatService.slaughter(id, req));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/{id}/chich-thuoc")
+    public ResponseEntity<?> chichThuoc(@PathVariable String id, @RequestBody ChichThuocRequest req) {
+        try {
+            return ResponseEntity.ok(goatService.chichThuoc(id, req));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }

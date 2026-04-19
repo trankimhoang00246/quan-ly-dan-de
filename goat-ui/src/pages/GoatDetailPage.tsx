@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { type Goat, type GoatLog, GENDER_LABEL, LABEL_LABEL, STATUS_LABEL, STATUS_COLOR, ACTION_LABEL } from '../types';
+import { type Goat, type GoatLog, GENDER_LABEL, LABEL_LABEL, STATUS_LABEL, STATUS_COLOR, ACTION_LABEL, TAG_LABEL, TAG_COLOR } from '../types';
 import GoatActionDialog, { type GoatActionType } from '../components/GoatActionDialog';
+import GoatEditDialog from '../components/GoatEditDialog';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText,
   Button, IconButton, Box, Stack, Chip,
@@ -14,6 +15,8 @@ import ScaleIcon from '@mui/icons-material/Scale';
 import SellIcon from '@mui/icons-material/Sell';
 import HeartBrokenIcon from '@mui/icons-material/HeartBroken';
 import SetMealIcon from '@mui/icons-material/SetMeal';
+import VaccinesIcon from '@mui/icons-material/Vaccines';
+import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 
 interface Props { id: string; onClose: () => void; }
@@ -31,6 +34,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [modal, setModal] = useState<GoatActionType | null>(null);
+  const [showEdit, setShowEdit] = useState(false);
 
   const navigateTo = (targetId: string) => setIdStack(prev => [...prev, targetId]);
   const goBack = () => setIdStack(prev => prev.slice(0, -1));
@@ -74,8 +78,16 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                 <Chip label={STATUS_LABEL[goat.status]} size="small"
                   sx={{ bgcolor: STATUS_COLOR[goat.status], color: '#fff', fontWeight: 600 }} />
               )}
+              {goat?.tag && (
+                <Chip label={TAG_LABEL[goat.tag]} size="small"
+                  sx={{ bgcolor: TAG_COLOR[goat.tag], color: '#fff', fontWeight: 600 }} />
+              )}
             </Stack>
             <Stack direction="row" spacing={1}>
+              <Button variant="outlined" color="primary" size="small" startIcon={<EditIcon />}
+                onClick={() => setShowEdit(true)}>
+                Sửa
+              </Button>
               <Button variant="outlined" color="error" size="small" startIcon={<DeleteIcon />}
                 onClick={() => setConfirmDelete(true)}>
                 Xóa dê
@@ -115,6 +127,13 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                   </Box>
                   <InfoItem label="Ngày nhập/sinh" value={goat.date ? new Date(goat.date).toLocaleDateString('vi-VN') : fmtDate(goat.createdAt)} />
                   <InfoItem label="Cập nhật" value={fmtDate(goat.updatedAt)} />
+                  {goat.tag && (
+                    <Box>
+                      <Box component="span" sx={{ color: 'text.secondary' }}>Đánh giá: </Box>
+                      <Chip label={TAG_LABEL[goat.tag]} size="small"
+                        sx={{ bgcolor: TAG_COLOR[goat.tag], color: '#fff', fontWeight: 600, ml: 0.5 }} />
+                    </Box>
+                  )}
                   {goat.note && <InfoItem label="Ghi chú" value={goat.note} />}
                 </Box>
               </Paper>
@@ -126,6 +145,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                   <Button variant="contained" color="success" startIcon={<SellIcon />} size="small" onClick={() => openModal('sell')}>Bán dê</Button>
                   <Button variant="contained" color="inherit" startIcon={<HeartBrokenIcon />} size="small" onClick={() => openModal('dead')}>Dê chết</Button>
                   <Button variant="contained" color="warning" startIcon={<SetMealIcon />} size="small" onClick={() => openModal('slaughter')}>Làm thịt</Button>
+                  <Button variant="contained" startIcon={<VaccinesIcon />} size="small" sx={{ bgcolor: '#7c3aed', '&:hover': { bgcolor: '#6d28d9' } }} onClick={() => openModal('chich-thuoc')}>Chích thuốc</Button>
                 </Stack>
               )}
 
@@ -177,7 +197,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                   <Table size="small">
                     <TableHead sx={{ bgcolor: 'grey.100' }}>
                       <TableRow>
-                        {['Ngày thực tế', 'Hành động', 'Cân (kg)', 'Tiền (đ)', 'Ghi chú'].map(h => (
+                        {['Ngày thực tế', 'Hành động', 'Cân (kg)', 'Tiền (đ)', 'Thuốc', 'Ghi chú'].map(h => (
                           <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
                         ))}
                       </TableRow>
@@ -185,7 +205,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                     <TableBody>
                       {logs.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={5} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                          <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                             Chưa có lịch sử
                           </TableCell>
                         </TableRow>
@@ -200,6 +220,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                           <TableCell><strong>{ACTION_LABEL[log.action]}</strong></TableCell>
                           <TableCell>{log.weight != null ? log.weight : '-'}</TableCell>
                           <TableCell>{log.price != null ? log.price.toLocaleString('vi-VN') : '-'}</TableCell>
+                          <TableCell>{log.medicine ?? '-'}</TableCell>
                           <TableCell>{log.note ?? '-'}</TableCell>
                         </TableRow>
                       ))}
@@ -234,6 +255,16 @@ export default function GoatDetailModal({ id, onClose }: Props) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {showEdit && goat && (
+        <GoatEditDialog
+          goat={goat}
+          isParent={children.length > 0}
+          isChild={!!(goat.fatherId || goat.motherId)}
+          onClose={() => setShowEdit(false)}
+          onSuccess={(updated) => { setGoat(updated); setShowEdit(false); }}
+        />
+      )}
 
       <GoatActionDialog
         goatId={modal ? currentId : null}

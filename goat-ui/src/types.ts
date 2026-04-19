@@ -1,7 +1,8 @@
 export type GoatStatus = 'ALIVE' | 'SOLD' | 'DEAD' | 'SLAUGHTERED';
 export type GoatGender = 'MALE' | 'FEMALE';
 export type GoatLabel = 'BUON' | 'GIONG';
-export type LogAction = 'CREATE' | 'UPDATE_WEIGHT' | 'SELL' | 'DEAD' | 'SLAUGHTER';
+export type LogAction = 'CREATE' | 'UPDATE_WEIGHT' | 'SELL' | 'DEAD' | 'SLAUGHTER' | 'CHICH_THUOC';
+export type GoatTag = 'DEP' | 'XAU';
 
 export interface Goat {
   id: string;
@@ -15,6 +16,7 @@ export interface Goat {
   motherId: string | null;
   motherCode: string | null;
   status: GoatStatus;
+  tag: GoatTag | null;
   note: string | null;
   date: string | null;      // ngày thực tế (nhập/sinh), dùng cho thống kê
   createdAt: string;
@@ -27,6 +29,7 @@ export interface GoatLog {
   action: LogAction;
   weight: number | null;
   price: number | null;
+  medicine: string | null;
   note: string | null;
   date: string | null;      // ngày thực tế của hành động, dùng cho thống kê
   createdAt: string;
@@ -62,6 +65,17 @@ export const ACTION_LABEL: Record<LogAction, string> = {
   SELL: 'Bán dê',
   DEAD: 'Dê chết',
   SLAUGHTER: 'Làm thịt',
+  CHICH_THUOC: 'Chích thuốc',
+};
+
+export const TAG_LABEL: Record<GoatTag, string> = {
+  DEP: 'Đẹp',
+  XAU: 'Xấu',
+};
+
+export const TAG_COLOR: Record<GoatTag, string> = {
+  DEP: '#16a34a',
+  XAU: '#dc2626',
 };
 
 export type TransactionType = 'EXPENSE' | 'REVENUE';

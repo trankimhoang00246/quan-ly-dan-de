@@ -16,7 +16,7 @@ interface Props {
 export default function GoatFormModal({ onClose, onSuccess }: Props) {
   const today = new Date().toISOString().split('T')[0];
   const [form, setForm] = useState({
-    code: '', gender: 'MALE', label: 'BUON',
+    code: '', gender: 'MALE', label: 'BUON', tag: '',
     currentWeight: '', capital: '', fatherId: '', motherId: '', note: '',
     date: today,
   });
@@ -47,6 +47,7 @@ export default function GoatFormModal({ onClose, onSuccess }: Props) {
         currentWeight: form.currentWeight ? Number(form.currentWeight) : null,
         capital: form.capital ? Number(form.capital) : 0,
         fatherId: form.fatherId || null, motherId: form.motherId || null,
+        tag: form.tag || null,
         note: form.note.trim() || null,
         date: form.date || null,
       });
@@ -87,6 +88,15 @@ export default function GoatFormModal({ onClose, onSuccess }: Props) {
               <RadioGroup row value={form.label} onChange={e => set('label', e.target.value)}>
                 <FormControlLabel value="BUON" control={<Radio size="small" />} label="Buôn" />
                 <FormControlLabel value="GIONG" control={<Radio size="small" />} label="Giống" />
+              </RadioGroup>
+            </FormControl>
+
+            <FormControl>
+              <FormLabel>Đánh giá (tuỳ chọn)</FormLabel>
+              <RadioGroup row value={form.tag} onChange={e => set('tag', e.target.value)}>
+                <FormControlLabel value="" control={<Radio size="small" />} label="Không" />
+                <FormControlLabel value="DEP" control={<Radio size="small" />} label="Đẹp" />
+                <FormControlLabel value="XAU" control={<Radio size="small" />} label="Xấu" />
               </RadioGroup>
             </FormControl>
 

@@ -22,6 +22,7 @@ public class Goat {
     private String motherId;
     private String motherCode;
     private String status;   // ALIVE, SOLD, DEAD, SLAUGHTERED
+    private String tag;      // DEP, XAU (optional)
     private String note;
     private LocalDate date;       // ngày thực tế (nhập/sinh), dùng cho thống kê
     private LocalDateTime createdAt;

@@ -4,6 +4,8 @@ import { type Goat, GENDER_LABEL, LABEL_LABEL, STATUS_LABEL, STATUS_COLOR } from
 import GoatFormModal from './GoatFormPage';
 import GoatDetailModal from './GoatDetailPage';
 import GoatActionDialog, { type GoatActionType } from '../components/GoatActionDialog';
+import GoatEditDialog from '../components/GoatEditDialog';
+import GoatFamilyTree from '../components/GoatFamilyTree';
 import {
   Box, Tabs, Tab, TextField, Button, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
@@ -18,6 +20,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import HeartBrokenIcon from '@mui/icons-material/HeartBroken';
 import SetMealIcon from '@mui/icons-material/SetMeal';
+import VaccinesIcon from '@mui/icons-material/Vaccines';
+import EditIcon from '@mui/icons-material/Edit';
 
 
 export default function GoatListPage() {
@@ -36,6 +40,12 @@ export default function GoatListPage() {
 
   const [actionGoatId, setActionGoatId] = useState<string | null>(null);
   const [actionType, setActionType] = useState<GoatActionType | null>(null);
+
+  const [editGoat, setEditGoat] = useState<Goat | null>(null);
+  const [activeGoatId, setActiveGoatId] = useState<string | null>(null);
+  const allGoats = [...herdGoats, ...inactiveGoats];
+  const isParentOf = (goatId: string) =>
+    allGoats.some(g => g.fatherId === goatId || g.motherId === goatId);
 
   const openAction = (goatId: string, type: GoatActionType) => {
     setActionGoatId(goatId); setActionType(type);
@@ -72,11 +82,14 @@ export default function GoatListPage() {
           textColor="primary" indicatorColor="primary">
           <Tab label={`Đàn dê (${herdGoats.length})`} />
           <Tab label={`Đã xuất / Đã chết (${inactiveGoats.length})`} />
+          <Tab label="Sơ đồ cây" />
         </Tabs>
       </Paper>
 
+      {activeTab === 2 && <GoatFamilyTree />}
+
       {/* Toolbar */}
-      <Stack direction="row" spacing={2} sx={{ alignItems: 'center', mb: 2, flexWrap: 'wrap' }}>
+      <Stack direction="row" spacing={2} sx={{ alignItems: 'center', mb: 2, flexWrap: 'wrap', display: activeTab === 2 ? 'none' : 'flex' }}>
         <TextField
           size="small"
           placeholder="Tìm theo mã số..."
@@ -101,7 +114,7 @@ export default function GoatListPage() {
       </Stack>
 
       {/* Table */}
-      <Paper variant="outlined">
+      {activeTab !== 2 && <Paper variant="outlined">
         <Table size="small">
           <TableHead sx={{ bgcolor: 'grey.100' }}>
             <TableRow>
@@ -130,7 +143,20 @@ export default function GoatListPage() {
               </TableRow>
             )}
             {filtered.map(goat => (
-              <TableRow key={goat.id} hover sx={{ opacity: isHerd ? 1 : 0.85 }}>
+              <TableRow
+                key={goat.id}
+                hover
+                onClick={() => setActiveGoatId(goat.id)}
+                sx={{
+                  opacity: isHerd ? 1 : 0.85,
+                  cursor: 'pointer',
+                  ...(activeGoatId === goat.id && {
+                    bgcolor: '#f0fdf4',
+                    borderLeft: '3px solid #16a34a',
+                    opacity: 1,
+                  }),
+                }}
+              >
                 <TableCell><strong>{goat.code}</strong></TableCell>
                 <TableCell>{GENDER_LABEL[goat.gender]}</TableCell>
                 <TableCell>
@@ -195,8 +221,18 @@ export default function GoatListPage() {
                             <SetMealIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
+                        <Tooltip title="Chích thuốc">
+                          <IconButton size="small" onClick={() => openAction(goat.id, 'chich-thuoc')} sx={{ color: '#7c3aed' }}>
+                            <VaccinesIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
                       </>
                     )}
+                    <Tooltip title="Sửa thông tin">
+                      <IconButton size="small" onClick={() => setEditGoat(goat)} color="primary">
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title="Xóa">
                       <IconButton size="small" onClick={() => { setDeleteGoatId(goat.id); setDeleteGoatCode(goat.code); }} color="error">
                         <DeleteIcon fontSize="small" />
@@ -208,7 +244,7 @@ export default function GoatListPage() {
             ))}
           </TableBody>
         </Table>
-      </Paper>
+      </Paper>}
 
       {/* Create modal */}
       {showCreate && (
@@ -242,6 +278,20 @@ export default function GoatListPage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {editGoat && (
+        <GoatEditDialog
+          goat={editGoat}
+          isParent={isParentOf(editGoat.id)}
+          isChild={!!(editGoat.fatherId || editGoat.motherId)}
+          onClose={() => setEditGoat(null)}
+          onSuccess={(updated) => {
+            setEditGoat(null);
+            setHerdGoats(prev => prev.map(g => g.id === updated.id ? updated : g));
+            setInactiveGoats(prev => prev.map(g => g.id === updated.id ? updated : g));
+          }}
+        />
+      )}
 
       <GoatActionDialog
         goatId={actionGoatId}

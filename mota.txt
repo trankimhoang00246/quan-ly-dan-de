@@ -15,6 +15,6 @@ Backend java thư mục goat
 Frontend react thu mục goat-ui 
 -> đây là dự án local quản lý nội bộ nên k cần làm đẹp chỉ cần thiện lợi dễ dùng là được r 
 
- - Backend: cd goat && ./gradlew bootRun                                                                 
+ - Backend: cd goat && ./gradlew clean bootRun                                                                 
   - Frontend: cd goat-ui && npm run dev                                                                   
   - Mở trình duyệt: http://localhost:5173   

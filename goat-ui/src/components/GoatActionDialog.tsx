@@ -5,13 +5,14 @@ import {
   Button, TextField, Stack, Alert,
 } from '@mui/material';
 
-export type GoatActionType = 'weight' | 'sell' | 'dead' | 'slaughter';
+export type GoatActionType = 'weight' | 'sell' | 'dead' | 'slaughter' | 'chich-thuoc';
 
 const ACTION_LABEL: Record<GoatActionType, string> = {
-  weight:    'Cập nhật cân',
-  sell:      'Bán dê',
-  dead:      'Ghi nhận dê chết',
-  slaughter: 'Làm thịt dê',
+  weight:      'Cập nhật cân',
+  sell:        'Bán dê',
+  dead:        'Ghi nhận dê chết',
+  slaughter:   'Làm thịt dê',
+  'chich-thuoc': 'Chích thuốc',
 };
 
 interface Props {
@@ -27,17 +28,19 @@ export default function GoatActionDialog({ goatId, actionType, onClose, onSucces
   const [mPrice, setMPrice] = useState('');
   const [mNote, setMNote] = useState('');
   const [mDate, setMDate] = useState(today);
+  const [mMedicine, setMMedicine] = useState('');
   const [saving, setSaving] = useState(false);
   const [mError, setMError] = useState('');
 
   const handleClose = () => {
-    setMWeight(''); setMPrice(''); setMNote(''); setMDate(today); setMError('');
+    setMWeight(''); setMPrice(''); setMNote(''); setMDate(today); setMMedicine(''); setMError('');
     onClose();
   };
 
   const handleSubmit = async () => {
     if (!goatId || !actionType) return;
     if (actionType === 'weight' && !mWeight) { setMError('Vui lòng nhập cân nặng'); return; }
+    if (actionType === 'chich-thuoc' && !mMedicine.trim()) { setMError('Vui lòng nhập tên thuốc'); return; }
     setSaving(true); setMError('');
     try {
       const body = {
@@ -50,6 +53,7 @@ export default function GoatActionDialog({ goatId, actionType, onClose, onSucces
       else if (actionType === 'sell') await api.sell(goatId, body);
       else if (actionType === 'dead') await api.markDead(goatId, body);
       else if (actionType === 'slaughter') await api.slaughter(goatId, body);
+      else if (actionType === 'chich-thuoc') await api.chichThuoc(goatId, { medicine: mMedicine.trim(), note: body.note, date: body.date });
       handleClose();
       onSuccess();
     } catch (e: unknown) { setMError(e instanceof Error ? e.message : String(e)); }
@@ -67,12 +71,18 @@ export default function GoatActionDialog({ goatId, actionType, onClose, onSucces
             value={mDate} onChange={e => setMDate(e.target.value)}
             slotProps={{ inputLabel: { shrink: true } }}
           />
-          <TextField
-            label={actionType === 'weight' ? 'Cân nặng mới (kg) *' : 'Cân (kg)'}
-            type="number" size="small" fullWidth
-            value={mWeight} onChange={e => setMWeight(e.target.value)}
-            slotProps={{ htmlInput: { step: 0.1, min: 0 } }}
-          />
+          {actionType === 'chich-thuoc' && (
+            <TextField label="Tên thuốc *" size="small" fullWidth
+              value={mMedicine} onChange={e => setMMedicine(e.target.value)} />
+          )}
+          {actionType !== 'chich-thuoc' && (
+            <TextField
+              label={actionType === 'weight' ? 'Cân nặng mới (kg) *' : 'Cân (kg)'}
+              type="number" size="small" fullWidth
+              value={mWeight} onChange={e => setMWeight(e.target.value)}
+              slotProps={{ htmlInput: { step: 0.1, min: 0 } }}
+            />
+          )}
           {(actionType === 'sell' || actionType === 'dead' || actionType === 'slaughter') && (
             <TextField label="Tiền bán (đ)" type="number" size="small" fullWidth
               value={mPrice} onChange={e => setMPrice(e.target.value)}

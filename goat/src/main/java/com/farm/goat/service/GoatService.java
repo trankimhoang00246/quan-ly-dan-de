@@ -61,6 +61,7 @@ public class GoatService {
                 goat.setMotherCode(m.getCode());
             });
         }
+        goat.setTag(req.tag());
         goat.setNote(req.note());
         goat.setStatus("ALIVE");
         goat.setDate(req.date() != null ? req.date() : LocalDate.now());
@@ -117,6 +118,33 @@ public class GoatService {
         goat.setUpdatedAt(LocalDateTime.now());
         goatRepo.save(goat);
         saveLog(id, "SLAUGHTER", req.weight(), req.price(), req.note(), req.date() != null ? req.date() : LocalDate.now());
+        return goat;
+    }
+
+    public Goat updateGoat(String id, UpdateGoatRequest req) {
+        Goat goat = getGoat(id);
+        if (req.gender() != null) goat.setGender(req.gender());
+        if (req.label() != null) goat.setLabel(req.label());
+        goat.setTag(req.tag());
+        if (req.capital() != null) goat.setCapital(req.capital());
+        goat.setNote(req.note());
+        goat.setUpdatedAt(LocalDateTime.now());
+        return goatRepo.save(goat);
+    }
+
+    public Goat chichThuoc(String id, ChichThuocRequest req) {
+        Goat goat = getGoat(id);
+        if (!"ALIVE".equals(goat.getStatus())) throw new RuntimeException("Dê không còn sống");
+        goat.setUpdatedAt(LocalDateTime.now());
+        goatRepo.save(goat);
+        GoatLog log = new GoatLog();
+        log.setGoatId(id);
+        log.setAction("CHICH_THUOC");
+        log.setMedicine(req.medicine());
+        log.setNote(req.note());
+        log.setDate(req.date() != null ? req.date() : LocalDate.now());
+        log.setCreatedAt(LocalDateTime.now());
+        logRepo.save(log);
         return goat;
     }
 

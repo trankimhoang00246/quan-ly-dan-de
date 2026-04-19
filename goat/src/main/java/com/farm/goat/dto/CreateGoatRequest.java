@@ -10,6 +10,7 @@ public record CreateGoatRequest(
         Double capital,
         String fatherId,
         String motherId,
+        String tag,
         String note,
         LocalDate date
 ) {}

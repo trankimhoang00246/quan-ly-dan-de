@@ -1,0 +1,12 @@
+services:
+  backend:
+    image: trankimhoang00246/goat-be:latest
+    ports:
+      - "8743:8080"
+
+  frontend:
+    image: trankimhoang00246/goat-ui:latest
+    ports:
+      - "8742:80"
+    depends_on:
+      - backend

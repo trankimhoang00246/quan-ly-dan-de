@@ -1,6 +1,6 @@
 import type { DashboardStats, FarmTransaction } from './types';
 
-const BASE = 'http://localhost:8080/api';
+const BASE = '/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${url}`, {

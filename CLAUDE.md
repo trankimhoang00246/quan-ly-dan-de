@@ -54,6 +54,45 @@ npm run lint      # ESLint check
 npm run preview   # preview production build
 ```
 
+## Docker
+
+Docker Hub username: `trankimhoang00246`
+Images: `trankimhoang00246/goat-be` (backend), `trankimhoang00246/goat-ui` (frontend)
+
+### Build & push images
+
+```bash
+# Backend
+cd goat
+docker build -t trankimhoang00246/goat-be:latest .
+docker push trankimhoang00246/goat-be:latest
+
+# Frontend
+cd goat-ui
+docker build -t trankimhoang00246/goat-ui:latest .
+docker push trankimhoang00246/goat-ui:latest
+```
+
+### Run with Docker Compose
+
+```bash
+# Pull latest images and start (from project root)
+docker compose up -d
+
+# Stop
+docker compose down
+```
+
+Frontend: http://localhost:8742
+Backend: http://localhost:8743
+
+> Nginx trong frontend container proxy `/api` sang `backend:8080` nên không cần expose backend ra ngoài để frontend gọi.
+
+## run 
+```bash
+./deploy.sh
+```
+
 ## Key Domain Concepts
 
 - Each goat has a unique **code** (mã số), but **code is reusable across goats** — the same code can be assigned to a new goat after the previous one with that code is no longer alive (SOLD/DEAD/SLAUGHTERED)

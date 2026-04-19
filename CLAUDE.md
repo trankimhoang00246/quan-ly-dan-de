@@ -26,12 +26,17 @@ Two-tier application:
 
 ### Frontend structure (`goat-ui/src/`)
 
-| File/Dir   | Role                                           |
-| ---------- | ---------------------------------------------- |
-| `App.tsx`  | Router with 3 routes: `/`, `/new`, `/goat/:id` |
-| `pages/`   | GoatListPage, GoatFormPage, GoatDetailPage     |
-| `api.ts`   | All fetch calls to the backend                 |
-| `types.ts` | TypeScript interfaces and label mappings       |
+| File/Dir                          | Role                                                           |
+| --------------------------------- | -------------------------------------------------------------- |
+| `App.tsx`                         | Tab-based navigation (Dashboard / Danh sách dê / Chi phí & DT) |
+| `pages/DashboardPage.tsx`         | Summary stats and charts                                       |
+| `pages/GoatListPage.tsx`          | Goat list with filtering                                       |
+| `pages/GoatDetailPage.tsx`        | Goat detail view with action history                           |
+| `pages/GoatFormPage.tsx`          | Create / edit goat form                                        |
+| `pages/TransactionPage.tsx`       | Cost & revenue tracking                                        |
+| `components/GoatActionDialog.tsx` | Dialog for Sell / Dead / Slaughter / UpdateWeight actions      |
+| `api.ts`                          | All fetch calls to the backend                                 |
+| `types.ts`                        | TypeScript interfaces and label mappings                       |
 
 ## Commands
 
@@ -88,9 +93,24 @@ Backend: http://localhost:8743
 
 > Nginx trong frontend container proxy `/api` sang `backend:8080` nên không cần expose backend ra ngoài để frontend gọi.
 
-## run 
+## build - run docker
+
+build
+
 ```bash
-./deploy.sh
+./build.sh
+```
+
+run
+
+```bash
+./run.sh
+```
+
+build-run
+
+```bash
+./build-run.sh
 ```
 
 ## Key Domain Concepts
@@ -104,6 +124,6 @@ Backend: http://localhost:8743
 
 ## Notes
 
-- No CSS framework — all styling is inline
-- MongoDB runs locally with no authentication
+- UI uses **MUI (Material UI)** — green primary (`#16a34a`), orange secondary (`#ea580c`)
+- MongoDB connection is Atlas cloud (see connection string in Architecture section above)
 - Frontend proxies API calls to `http://localhost:8080` (configured in `api.ts`)

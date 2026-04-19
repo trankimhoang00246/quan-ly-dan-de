@@ -8,6 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -105,5 +108,12 @@ public class GoatController {
     @GetMapping("/{id}/logs")
     public List<GoatLog> getLogs(@PathVariable String id) {
         return goatService.getLogs(id);
+    }
+
+    @GetMapping("/stats")
+    public DashboardStats getDashboardStats(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return goatService.getDashboardStats(from, to);
     }
 }

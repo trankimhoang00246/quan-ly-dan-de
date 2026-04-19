@@ -23,4 +23,11 @@ export const api = {
   deleteGoat: (id: string) => request<any>(`/goats/${id}`, { method: 'DELETE' }),
   getLogs: (id: string) => request<any[]>(`/goats/${id}/logs`),
   getChildren: (id: string) => request<any[]>(`/goats/${id}/children`),
+  getDashboardStats: (from?: string, to?: string) => {
+    const p = new URLSearchParams();
+    if (from) p.set('from', from);
+    if (to) p.set('to', to);
+    const q = p.toString();
+    return request<any>(`/goats/stats${q ? '?' + q : ''}`);
+  },
 };

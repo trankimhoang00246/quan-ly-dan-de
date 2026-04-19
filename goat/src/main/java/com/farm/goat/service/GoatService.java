@@ -8,8 +8,10 @@ import com.farm.goat.repository.GoatRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -132,6 +134,52 @@ public class GoatService {
 
     public List<GoatLog> getLogs(String id) {
         return logRepo.findByGoatIdOrderByCreatedAtDesc(id);
+    }
+
+    public DashboardStats getDashboardStats(LocalDate from, LocalDate to) {
+        LocalDateTime fromDt = from != null ? from.atStartOfDay() : null;
+        LocalDateTime toDt   = to   != null ? to.atTime(23, 59, 59) : null;
+
+        List<Goat> all = goatRepo.findAllByOrderByCreatedAtDesc().stream()
+                .filter(g -> (fromDt == null || !g.getCreatedAt().isBefore(fromDt))
+                          && (toDt   == null || !g.getCreatedAt().isAfter(toDt)))
+                .collect(Collectors.toList());
+
+        int alive = 0, sold = 0, dead = 0, slaughtered = 0;
+        int maleAlive = 0, femaleAlive = 0, buonAlive = 0, giongAlive = 0;
+        double totalCapital = 0;
+        double totalWeightAlive = 0;
+        int countWithWeight = 0;
+
+        for (Goat g : all) {
+            totalCapital += g.getCapital() != null ? g.getCapital() : 0;
+            switch (g.getStatus()) {
+                case "ALIVE" -> {
+                    alive++;
+                    if ("MALE".equals(g.getGender())) maleAlive++; else femaleAlive++;
+                    if ("BUON".equals(g.getLabel())) buonAlive++; else giongAlive++;
+                    if (g.getCurrentWeight() != null) {
+                        totalWeightAlive += g.getCurrentWeight();
+                        countWithWeight++;
+                    }
+                }
+                case "SOLD" -> sold++;
+                case "DEAD" -> dead++;
+                case "SLAUGHTERED" -> slaughtered++;
+            }
+        }
+
+        double avgWeight = countWithWeight > 0 ? totalWeightAlive / countWithWeight : 0;
+
+        double totalRevenue = logRepo.findByActionIn(List.of("SELL", "SLAUGHTER")).stream()
+                .filter(l -> (fromDt == null || !l.getCreatedAt().isBefore(fromDt))
+                          && (toDt   == null || !l.getCreatedAt().isAfter(toDt)))
+                .mapToDouble(l -> l.getPrice() != null ? l.getPrice() : 0)
+                .sum();
+
+        return new DashboardStats(all.size(), alive, sold, dead, slaughtered,
+                maleAlive, femaleAlive, buonAlive, giongAlive,
+                totalCapital, totalRevenue, Math.round(avgWeight * 10.0) / 10.0);
     }
 
     private void saveLog(String goatId, String action, Double weight, Double price, String note) {

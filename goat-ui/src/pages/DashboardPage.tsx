@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import type { DashboardStats } from '../types';
 import {
   Box, Grid, Paper, Typography, CircularProgress, Alert, Divider, LinearProgress,
   TextField, Button, Stack, Chip,
@@ -8,21 +9,6 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
-
-interface DashboardStats {
-  totalGoats: number;
-  aliveCount: number;
-  soldCount: number;
-  deadCount: number;
-  slaughteredCount: number;
-  maleAlive: number;
-  femaleAlive: number;
-  buonAlive: number;
-  giongAlive: number;
-  totalCapital: number;
-  totalRevenue: number;
-  avgWeightAlive: number;
-}
 
 const fmtMoney = (v: number) => v.toLocaleString('vi-VN') + ' đ';
 
@@ -126,7 +112,7 @@ export default function DashboardPage() {
   if (error) return <Alert severity="error">{error}</Alert>;
   if (!stats) return null;
 
-  const profit = stats.totalRevenue - stats.totalCapital;
+  const profit = stats.totalRevenue + stats.otherRevenue - stats.totalCapital - stats.otherExpenses;
   const profitPositive = profit >= 0;
   const profitColor = profitPositive ? '#16a34a' : '#dc2626';
   const inactive = stats.soldCount + stats.deadCount + stats.slaughteredCount;
@@ -218,7 +204,7 @@ export default function DashboardPage() {
       {/* === Financial Summary === */}
       <SectionLabel>Tài chính</SectionLabel>
       <Grid container spacing={2} sx={{ mb: 3, mt: 0.5 }}>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
             title="Tổng vốn đã đầu tư"
             value={fmtMoney(stats.totalCapital)}
@@ -226,16 +212,32 @@ export default function DashboardPage() {
             color="#6366f1"
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
-            title="Tổng doanh thu"
+            title="Tổng doanh thu bán dê"
             value={fmtMoney(stats.totalRevenue)}
             sub="Từ bán & làm thịt có ghi giá"
             color="#0891b2"
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 4 }}>
-          <Paper variant="outlined" sx={{ p: 2.5, borderLeft: `4px solid ${profitColor}`, height: '100%' }}>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            title="Chi phí phát sinh"
+            value={fmtMoney(stats.otherExpenses)}
+            sub="Thức ăn, cám và chi phí khác"
+            color="#dc2626"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <StatCard
+            title="Doanh thu khác"
+            value={fmtMoney(stats.otherRevenue)}
+            sub="Phân dê và doanh thu phụ"
+            color="#16a34a"
+          />
+        </Grid>
+        <Grid size={{ xs: 12 }}>
+          <Paper variant="outlined" sx={{ p: 2.5, borderLeft: `4px solid ${profitColor}` }}>
             <Typography variant="body2" color="text.secondary" gutterBottom>
               {profitPositive ? 'Lợi nhuận' : 'Lỗ'}
             </Typography>
@@ -248,7 +250,7 @@ export default function DashboardPage() {
               </Typography>
             </Box>
             <Typography variant="caption" color="text.secondary">
-              {profitPositive ? 'Doanh thu vượt vốn đầu tư' : 'Doanh thu chưa đủ bù vốn'}
+              {profitPositive ? 'Doanh thu (bán dê + khác) trừ vốn và chi phí phát sinh' : 'Doanh thu (bán dê + khác) chưa đủ bù vốn và chi phí'}
             </Typography>
           </Paper>
         </Grid>

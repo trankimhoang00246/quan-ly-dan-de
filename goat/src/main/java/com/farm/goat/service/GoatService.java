@@ -19,6 +19,7 @@ public class GoatService {
 
     private final GoatRepository goatRepo;
     private final GoatLogRepository logRepo;
+    private final TransactionService transactionService;
 
     public List<Goat> getAllGoats() {
         return goatRepo.findAllByOrderByCreatedAtDesc();
@@ -177,9 +178,13 @@ public class GoatService {
                 .mapToDouble(l -> l.getPrice() != null ? l.getPrice() : 0)
                 .sum();
 
+        double otherExpenses = transactionService.sumByType("EXPENSE", from, to);
+        double otherRevenue  = transactionService.sumByType("REVENUE", from, to);
+
         return new DashboardStats(all.size(), alive, sold, dead, slaughtered,
                 maleAlive, femaleAlive, buonAlive, giongAlive,
-                totalCapital, totalRevenue, Math.round(avgWeight * 10.0) / 10.0);
+                totalCapital, totalRevenue, Math.round(avgWeight * 10.0) / 10.0,
+                otherExpenses, otherRevenue);
     }
 
     private void saveLog(String goatId, String action, Double weight, Double price, String note) {

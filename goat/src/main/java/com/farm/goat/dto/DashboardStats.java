@@ -12,5 +12,7 @@ public record DashboardStats(
         int giongAlive,
         double totalCapital,
         double totalRevenue,
-        double avgWeightAlive
+        double avgWeightAlive,
+        double otherExpenses,
+        double otherRevenue
 ) {}

@@ -1,3 +1,5 @@
+import type { DashboardStats, FarmTransaction } from './types';
+
 const BASE = 'http://localhost:8080/api';
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
@@ -28,6 +30,20 @@ export const api = {
     if (from) p.set('from', from);
     if (to) p.set('to', to);
     const q = p.toString();
-    return request<any>(`/goats/stats${q ? '?' + q : ''}`);
+    return request<DashboardStats>(`/goats/stats${q ? '?' + q : ''}`);
   },
+  getTransactions: (type?: string, from?: string, to?: string) => {
+    const p = new URLSearchParams();
+    if (type) p.set('type', type);
+    if (from) p.set('from', from);
+    if (to) p.set('to', to);
+    const q = p.toString();
+    return request<FarmTransaction[]>(`/transactions${q ? '?' + q : ''}`);
+  },
+  createTransaction: (body: Omit<FarmTransaction, 'id' | 'createdAt'>) =>
+    request<FarmTransaction>('/transactions', { method: 'POST', body: JSON.stringify(body) }),
+  updateTransaction: (id: string, body: Omit<FarmTransaction, 'id' | 'createdAt'>) =>
+    request<FarmTransaction>(`/transactions/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  deleteTransaction: (id: string) =>
+    request<{ message: string }>(`/transactions/${id}`, { method: 'DELETE' }),
 };

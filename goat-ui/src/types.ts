@@ -61,3 +61,42 @@ export const ACTION_LABEL: Record<LogAction, string> = {
   DEAD: 'Dê chết',
   SLAUGHTER: 'Làm thịt',
 };
+
+export type TransactionType = 'EXPENSE' | 'REVENUE';
+
+export interface FarmTransaction {
+  id: string;
+  description: string;
+  amount: number;
+  type: TransactionType;
+  date: string;
+  note: string | null;
+  createdAt: string;
+}
+
+export interface DashboardStats {
+  totalGoats: number;
+  aliveCount: number;
+  soldCount: number;
+  deadCount: number;
+  slaughteredCount: number;
+  maleAlive: number;
+  femaleAlive: number;
+  buonAlive: number;
+  giongAlive: number;
+  totalCapital: number;
+  totalRevenue: number;
+  avgWeightAlive: number;
+  otherExpenses: number;
+  otherRevenue: number;
+}
+
+export const TRANSACTION_TYPE_LABEL: Record<TransactionType, string> = {
+  EXPENSE: 'Chi phí',
+  REVENUE: 'Doanh thu khác',
+};
+
+export const TRANSACTION_TYPE_COLOR: Record<TransactionType, string> = {
+  EXPENSE: '#dc2626',
+  REVENUE: '#16a34a',
+};

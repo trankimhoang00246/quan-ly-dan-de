@@ -21,3 +21,5 @@ Frontend react thu mục goat-ui
 
 
   admin / admin123 
+
+  task làm dở: bạn ơi, ở tab Sơ đồ cây ở file GoatListPage.tsx, có nút reload (để rerender lại) có nút ẩn đi các dê đã xuất, ẩn đi các dê đang sống trong đàn   

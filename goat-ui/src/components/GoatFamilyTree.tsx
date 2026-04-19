@@ -1,8 +1,11 @@
 import '@xyflow/react/dist/style.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReactFlow, Controls, MiniMap, Background, type NodeTypes } from '@xyflow/react';
-import { Box, CircularProgress, Alert, TextField, InputAdornment, Chip } from '@mui/material';
+import { Box, CircularProgress, Alert, TextField, InputAdornment, Chip, Tooltip, IconButton } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { api } from '../api';
 import type { Goat } from '../types';
 import GoatTreeNode, { type GoatFlowNode } from './GoatTreeNode';
@@ -14,25 +17,41 @@ const nodeTypes: NodeTypes = { goatNode: GoatTreeNode };
 export default function GoatFamilyTree() {
   const [goats, setGoats] = useState<Goat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reloading, setReloading] = useState(false);
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [hideInactive, setHideInactive] = useState(false);
+  const [hideAlive, setHideAlive] = useState(false);
 
-  useEffect(() => {
+  const loadGoats = useCallback((isReload = false) => {
+    if (isReload) setReloading(true); else setLoading(true);
+    setError('');
     api.getGoats()
       .then(setGoats)
       .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+      .finally(() => { setLoading(false); setReloading(false); });
   }, []);
+
+  useEffect(() => { loadGoats(); }, [loadGoats]);
+
+  // Apply hide filters first
+  const visibleGoats = useMemo(() => {
+    return goats.filter(g => {
+      if (hideInactive && g.status !== 'ALIVE') return false;
+      if (hideAlive && g.status === 'ALIVE') return false;
+      return true;
+    });
+  }, [goats, hideInactive, hideAlive]);
 
   // When search is active, filter to matched goat + ancestors/descendants
   const filteredGoats = useMemo(() => {
-    if (!search.trim()) return goats;
+    if (!search.trim()) return visibleGoats;
     const q = search.trim().toLowerCase();
     const matched = new Set<string>();
 
     const addAncestors = (id: string) => {
-      const g = goats.find(x => x.id === id);
+      const g = visibleGoats.find(x => x.id === id);
       if (!g || matched.has(id)) return;
       matched.add(id);
       if (g.fatherId) addAncestors(g.fatherId);
@@ -42,16 +61,16 @@ export default function GoatFamilyTree() {
     const addDescendants = (id: string) => {
       if (matched.has(id)) return;
       matched.add(id);
-      goats.filter(x => x.fatherId === id || x.motherId === id).forEach(c => addDescendants(c.id));
+      visibleGoats.filter(x => x.fatherId === id || x.motherId === id).forEach(c => addDescendants(c.id));
     };
 
-    goats.filter(g => g.code.toLowerCase().includes(q)).forEach(g => {
+    visibleGoats.filter(g => g.code.toLowerCase().includes(q)).forEach(g => {
       addAncestors(g.id);
       addDescendants(g.id);
     });
 
-    return goats.filter(g => matched.has(g.id));
-  }, [goats, search]);
+    return visibleGoats.filter(g => matched.has(g.id));
+  }, [visibleGoats, search]);
 
   const { nodes, edges } = useMemo(() => {
     if (!filteredGoats.length) return { nodes: [] as GoatFlowNode[], edges: [] };
@@ -66,7 +85,7 @@ export default function GoatFamilyTree() {
 
   return (
     <Box>
-      <Box sx={{ mb: 1.5, display: 'flex', gap: 1.5, alignItems: 'center' }}>
+      <Box sx={{ mb: 1.5, display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap' }}>
         <TextField
           size="small"
           placeholder="Tìm dê theo mã số..."
@@ -92,12 +111,43 @@ export default function GoatFamilyTree() {
             onDelete={() => setSearch('')}
           />
         )}
+        <Tooltip title="Tải lại sơ đồ">
+          <IconButton size="small" onClick={() => loadGoats(true)} disabled={reloading}>
+            {reloading ? <CircularProgress size={18} /> : <RefreshIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={hideInactive ? 'Đang ẩn dê đã xuất — nhấn để hiện lại' : 'Ẩn dê đã xuất (bán/chết/làm thịt)'}>
+          <IconButton
+            size="small"
+            onClick={() => setHideInactive(v => !v)}
+            color={hideInactive ? 'warning' : 'default'}
+          >
+            {hideInactive ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+        <Tooltip title={hideAlive ? 'Đang ẩn dê đang sống — nhấn để hiện lại' : 'Ẩn dê đang sống trong đàn'}>
+          <IconButton
+            size="small"
+            onClick={() => setHideAlive(v => !v)}
+            color={hideAlive ? 'success' : 'default'}
+          >
+            {hideAlive ? <VisibilityOffIcon fontSize="small" color="success" /> : <VisibilityIcon fontSize="small" />}
+          </IconButton>
+        </Tooltip>
+        {(hideInactive || hideAlive) && (
+          <Chip
+            label={`${visibleGoats.length} / ${goats.length} con`}
+            size="small"
+            color="default"
+            variant="outlined"
+          />
+        )}
       </Box>
 
       <Box sx={{ width: '100%', height: 'calc(100vh - 280px)', border: '1px solid #e0e0e0', borderRadius: 2, overflow: 'hidden' }}>
         {filteredGoats.length === 0 ? (
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'text.secondary' }}>
-            Không tìm thấy dê nào khớp với "{search}"
+            {search ? `Không tìm thấy dê nào khớp với "${search}"` : 'Không có dê nào để hiển thị'}
           </Box>
         ) : (
           <ReactFlow<GoatFlowNode>

@@ -16,7 +16,8 @@ public class GoatLog {
     private String action;   // CREATE, UPDATE_WEIGHT, SELL, DEAD, SLAUGHTER, CHICH_THUOC
     private Double weight;
     private Double price;
-    private String medicine; // tên thuốc (cho hành động CHICH_THUOC)
+    private String medicine;      // tên thuốc (cho hành động CHICH_THUOC)
+    private LocalDate nextDueDate; // ngày cần chích lại (cho hành động CHICH_THUOC)
     private String note;
     private LocalDate date;       // ngày thực tế của hành động, dùng cho thống kê
     private LocalDateTime createdAt;

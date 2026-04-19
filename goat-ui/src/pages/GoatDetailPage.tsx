@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { useToast } from '../context/SnackbarContext';
 import { type Goat, type GoatLog, GENDER_LABEL, LABEL_LABEL, STATUS_LABEL, STATUS_COLOR, ACTION_LABEL, TAG_LABEL, TAG_COLOR } from '../types';
 import GoatActionDialog, { type GoatActionType } from '../components/GoatActionDialog';
 import GoatEditDialog from '../components/GoatEditDialog';
+import WeightChart from '../components/WeightChart';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText,
   Button, IconButton, Box, Stack, Chip,
@@ -56,11 +58,18 @@ export default function GoatDetailModal({ id, onClose }: Props) {
       .finally(() => setLoading(false));
   }, [currentId]);
 
+  const { showToast } = useToast();
   const openModal = (t: GoatActionType) => setModal(t);
 
   const fmtMoney = (v: number | null) => v != null ? v.toLocaleString('vi-VN') + ' đ' : '-';
   const fmtDate = (s: string) => new Date(s).toLocaleString('vi-VN');
   const isAlive = goat?.status === 'ALIVE';
+
+  // Tính lãi/lỗ từ log bán/mổ
+  const revenueLog = logs.find(l => l.action === 'SELL' || l.action === 'SLAUGHTER');
+  const profit = revenueLog?.price != null && goat?.capital != null
+    ? revenueLog.price - goat.capital
+    : null;
 
   return (
     <>
@@ -134,9 +143,25 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                         sx={{ bgcolor: TAG_COLOR[goat.tag], color: '#fff', fontWeight: 600, ml: 0.5 }} />
                     </Box>
                   )}
+                  {profit !== null && (
+                    <Box>
+                      <Box component="span" sx={{ color: 'text.secondary' }}>Lãi / Lỗ: </Box>
+                      <Box component="span" sx={{ fontWeight: 700, color: profit >= 0 ? '#16a34a' : '#dc2626' }}>
+                        {profit >= 0 ? '+' : ''}{profit.toLocaleString('vi-VN')} đ
+                      </Box>
+                    </Box>
+                  )}
                   {goat.note && <InfoItem label="Ghi chú" value={goat.note} />}
                 </Box>
               </Paper>
+
+              {/* Weight chart */}
+              {logs.some(l => (l.action === 'CREATE' || l.action === 'UPDATE_WEIGHT') && l.weight != null) && (
+                <Paper variant="outlined" sx={{ p: 2 }}>
+                  <Box sx={{ fontSize: 15, fontWeight: 700, mb: 1.5 }}>Biểu đồ tăng trưởng cân nặng</Box>
+                  <WeightChart logs={logs} />
+                </Paper>
+              )}
 
               {/* Actions */}
               {isAlive && (
@@ -197,7 +222,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                   <Table size="small">
                     <TableHead sx={{ bgcolor: 'grey.100' }}>
                       <TableRow>
-                        {['Ngày thực tế', 'Hành động', 'Cân (kg)', 'Tiền (đ)', 'Thuốc', 'Ghi chú'].map(h => (
+                        {['Ngày thực tế', 'Hành động', 'Cân (kg)', 'Tiền (đ)', 'Thuốc', 'Chích lại', 'Ghi chú'].map(h => (
                           <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
                         ))}
                       </TableRow>
@@ -205,7 +230,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                     <TableBody>
                       {logs.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={6} align="center" sx={{ py: 3, color: 'text.secondary' }}>
+                          <TableCell colSpan={7} align="center" sx={{ py: 3, color: 'text.secondary' }}>
                             Chưa có lịch sử
                           </TableCell>
                         </TableRow>
@@ -221,6 +246,12 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                           <TableCell>{log.weight != null ? log.weight : '-'}</TableCell>
                           <TableCell>{log.price != null ? log.price.toLocaleString('vi-VN') : '-'}</TableCell>
                           <TableCell>{log.medicine ?? '-'}</TableCell>
+                          <TableCell>
+                            {log.nextDueDate
+                              ? <Chip label={new Date(log.nextDueDate).toLocaleDateString('vi-VN')} size="small"
+                                  color={new Date(log.nextDueDate) <= new Date() ? 'error' : 'warning'} variant="outlined" />
+                              : '-'}
+                          </TableCell>
                           <TableCell>{log.note ?? '-'}</TableCell>
                         </TableRow>
                       ))}
@@ -247,8 +278,11 @@ export default function GoatDetailModal({ id, onClose }: Props) {
           <Button variant="contained" color="error" disabled={deleting}
             onClick={async () => {
               setDeleting(true);
-              try { await api.deleteGoat(currentId); onClose(); }
-              catch (e: unknown) { setError(e instanceof Error ? e.message : String(e)); setConfirmDelete(false); }
+              try { await api.deleteGoat(currentId); showToast('Đã xóa dê thành công'); onClose(); }
+              catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : String(e);
+                setError(msg); showToast(msg, 'error'); setConfirmDelete(false);
+              }
               finally { setDeleting(false); }
             }}>
             {deleting ? 'Đang xóa...' : 'Xóa'}

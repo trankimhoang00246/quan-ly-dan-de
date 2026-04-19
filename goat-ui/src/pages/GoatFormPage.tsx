@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { useToast } from '../context/SnackbarContext';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, IconButton, TextField, Stack, Alert,
@@ -13,16 +14,20 @@ interface Props {
   onSuccess: (goatId: string) => void;
 }
 
+const EMPTY_FORM = (today: string) => ({
+  code: '', gender: 'MALE', label: 'BUON', tag: '',
+  currentWeight: '', capital: '', fatherId: '', motherId: '', note: '',
+  date: today,
+});
+
 export default function GoatFormModal({ onClose, onSuccess }: Props) {
+  const { showToast } = useToast();
   const today = new Date().toISOString().split('T')[0];
-  const [form, setForm] = useState({
-    code: '', gender: 'MALE', label: 'BUON', tag: '',
-    currentWeight: '', capital: '', fatherId: '', motherId: '', note: '',
-    date: today,
-  });
+  const [form, setForm] = useState(EMPTY_FORM(today));
   const [goats, setGoats] = useState<{ id: string; code: string; gender: string }[]>([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [addAnother, setAddAnother] = useState(false);
 
   useEffect(() => { api.getHerdGoats().then(setGoats).catch(() => {}); }, []);
 
@@ -42,7 +47,7 @@ export default function GoatFormModal({ onClose, onSuccess }: Props) {
     if (!form.code.trim()) return setError('Vui lòng nhập mã số');
     setSaving(true);
     try {
-      const goat = await api.createGoat({
+      const goat: any = await api.createGoat({
         code: form.code.trim(), gender: form.gender, label: form.label,
         currentWeight: form.currentWeight ? Number(form.currentWeight) : null,
         capital: form.capital ? Number(form.capital) : 0,
@@ -51,8 +56,19 @@ export default function GoatFormModal({ onClose, onSuccess }: Props) {
         note: form.note.trim() || null,
         date: form.date || null,
       });
-      onSuccess(goat.id);
-    } catch (e: unknown) { setError(e instanceof Error ? e.message : String(e)); }
+      showToast(`Đã thêm dê #${goat.code} thành công`);
+      if (addAnother) {
+        setForm(EMPTY_FORM(today));
+        setError('');
+        setAddAnother(false);
+      } else {
+        onSuccess(goat.id);
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+      showToast(msg, 'error');
+    }
     finally { setSaving(false); }
   };
 
@@ -148,7 +164,12 @@ export default function GoatFormModal({ onClose, onSuccess }: Props) {
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Hủy</Button>
-          <Button type="submit" variant="contained" color="primary" disabled={saving}>
+          <Button variant="outlined" color="primary" disabled={saving} type="submit"
+            onClick={() => setAddAnother(true)}>
+            Lưu & thêm con khác
+          </Button>
+          <Button type="submit" variant="contained" color="primary" disabled={saving}
+            onClick={() => setAddAnother(false)}>
             {saving ? 'Đang lưu...' : 'Lưu'}
           </Button>
         </DialogActions>

@@ -128,6 +128,18 @@ public class GoatController {
         return goatService.getLogs(id);
     }
 
+    @GetMapping("/vaccine-due")
+    public List<VaccineDueItem> getVaccineDue(
+            @RequestParam(defaultValue = "7") int days) {
+        return goatService.getVaccineDue(days);
+    }
+
+    @GetMapping("/needs-weight")
+    public List<Goat> getNeedsWeight(
+            @RequestParam(defaultValue = "30") int days) {
+        return goatService.getNeedsWeight(days);
+    }
+
     @GetMapping("/stats")
     public DashboardStats getDashboardStats(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,

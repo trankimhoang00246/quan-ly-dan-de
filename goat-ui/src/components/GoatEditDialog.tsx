@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api';
+import { useToast } from '../context/SnackbarContext';
 import type { Goat } from '../types';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export default function GoatEditDialog({ goat, isParent, isChild, onClose, onSuccess }: Props) {
+  const { showToast } = useToast();
   const [gender, setGender] = useState(goat.gender);
   const [label, setLabel] = useState(goat.label);
   const [tag, setTag] = useState(goat.tag ?? '');
@@ -34,9 +36,12 @@ export default function GoatEditDialog({ goat, isParent, isChild, onClose, onSuc
         capital: capital !== '' ? Number(capital) : goat.capital,
         note: note.trim() || null,
       });
+      showToast('Đã cập nhật thông tin dê');
       onSuccess(updated);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      setError(msg);
+      showToast(msg, 'error');
     } finally {
       setSaving(false);
     }

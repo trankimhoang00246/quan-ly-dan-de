@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api';
+import { useToast } from '../context/SnackbarContext';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Stack, Alert,
@@ -22,18 +23,29 @@ interface Props {
   onSuccess: () => void;
 }
 
+const ACTION_SUCCESS: Record<GoatActionType, string> = {
+  weight:        'Đã cập nhật cân nặng',
+  sell:          'Đã ghi nhận bán dê',
+  dead:          'Đã ghi nhận dê chết',
+  slaughter:     'Đã ghi nhận làm thịt',
+  'chich-thuoc': 'Đã ghi nhận chích thuốc',
+};
+
 export default function GoatActionDialog({ goatId, actionType, onClose, onSuccess }: Props) {
+  const { showToast } = useToast();
   const today = new Date().toISOString().split('T')[0];
   const [mWeight, setMWeight] = useState('');
   const [mPrice, setMPrice] = useState('');
   const [mNote, setMNote] = useState('');
   const [mDate, setMDate] = useState(today);
   const [mMedicine, setMMedicine] = useState('');
+  const [mNextDue, setMNextDue] = useState('');
+  const [mCost, setMCost] = useState('');
   const [saving, setSaving] = useState(false);
   const [mError, setMError] = useState('');
 
   const handleClose = () => {
-    setMWeight(''); setMPrice(''); setMNote(''); setMDate(today); setMMedicine(''); setMError('');
+    setMWeight(''); setMPrice(''); setMNote(''); setMDate(today); setMMedicine(''); setMNextDue(''); setMCost(''); setMError('');
     onClose();
   };
 
@@ -53,10 +65,15 @@ export default function GoatActionDialog({ goatId, actionType, onClose, onSucces
       else if (actionType === 'sell') await api.sell(goatId, body);
       else if (actionType === 'dead') await api.markDead(goatId, body);
       else if (actionType === 'slaughter') await api.slaughter(goatId, body);
-      else if (actionType === 'chich-thuoc') await api.chichThuoc(goatId, { medicine: mMedicine.trim(), note: body.note, date: body.date });
+      else if (actionType === 'chich-thuoc') await api.chichThuoc(goatId, { medicine: mMedicine.trim(), note: body.note, date: body.date, nextDueDate: mNextDue || null, cost: mCost ? Number(mCost) : null });
       handleClose();
+      showToast(ACTION_SUCCESS[actionType]);
       onSuccess();
-    } catch (e: unknown) { setMError(e instanceof Error ? e.message : String(e)); }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setMError(msg);
+      showToast(msg, 'error');
+    }
     finally { setSaving(false); }
   };
 
@@ -72,8 +89,16 @@ export default function GoatActionDialog({ goatId, actionType, onClose, onSucces
             slotProps={{ inputLabel: { shrink: true } }}
           />
           {actionType === 'chich-thuoc' && (
-            <TextField label="Tên thuốc *" size="small" fullWidth
-              value={mMedicine} onChange={e => setMMedicine(e.target.value)} />
+            <>
+              <TextField label="Tên thuốc *" size="small" fullWidth
+                value={mMedicine} onChange={e => setMMedicine(e.target.value)} />
+              <TextField label="Chi phí thuốc (đ, tuỳ chọn)" type="number" size="small" fullWidth
+                value={mCost} onChange={e => setMCost(e.target.value)}
+                slotProps={{ htmlInput: { min: 0 } }} />
+              <TextField label="Ngày cần chích lại (tuỳ chọn)" type="date" size="small" fullWidth
+                value={mNextDue} onChange={e => setMNextDue(e.target.value)}
+                slotProps={{ inputLabel: { shrink: true } }} />
+            </>
           )}
           {actionType !== 'chich-thuoc' && (
             <TextField

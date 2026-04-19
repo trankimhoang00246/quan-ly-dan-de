@@ -1,12 +1,26 @@
-import { useState } from 'react';
-import { AppBar, Toolbar, Typography, Container, CssBaseline, Tabs, Tab, Box } from '@mui/material';
+import { lazy, Suspense, useState } from 'react';
+import { AppBar, Toolbar, Typography, Container, CssBaseline, Tabs, Tab, Box, Button, CircularProgress } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import ListIcon from '@mui/icons-material/FormatListBulleted';
 import ReceiptIcon from '@mui/icons-material/Receipt';
-import GoatListPage from './pages/GoatListPage';
-import DashboardPage from './pages/DashboardPage';
-import TransactionPage from './pages/TransactionPage';
+import LogoutIcon from '@mui/icons-material/Logout';
+import LoginPage from './pages/LoginPage';
+import { SnackbarProvider } from './context/SnackbarContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
+
+const DashboardPage   = lazy(() => import('./pages/DashboardPage'));
+const GoatListPage    = lazy(() => import('./pages/GoatListPage'));
+const TransactionPage = lazy(() => import('./pages/TransactionPage'));
+
+function PageLoader() {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
+      <CircularProgress color="primary" />
+    </Box>
+  );
+}
 
 const theme = createTheme({
   palette: {
@@ -15,18 +29,21 @@ const theme = createTheme({
   },
 });
 
-export default function App() {
+function AppShell() {
+  const { isAuthenticated, username, logout } = useAuth();
   const [tab, setTab] = useState(0);
 
+  if (!isAuthenticated) return <LoginPage />;
+
   return (
-    <ThemeProvider theme={theme}>
+    <ErrorBoundary>
       <CssBaseline />
       <AppBar position="static" color="primary" elevation={2}>
         <Toolbar sx={{ gap: 3 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: 1 }}>
             🐐 Quản Lý Đàn Dê
           </Typography>
-          <Box sx={{ ml: 2 }}>
+          <Box sx={{ ml: 2, flex: 1 }}>
             <Tabs
               value={tab}
               onChange={(_, v) => setTab(v)}
@@ -54,13 +71,41 @@ export default function App() {
               />
             </Tabs>
           </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.85)' }}>
+              {username}
+            </Typography>
+            <Button
+              color="inherit"
+              size="small"
+              startIcon={<LogoutIcon />}
+              onClick={logout}
+              sx={{ color: 'rgba(255,255,255,0.85)', textTransform: 'none' }}
+            >
+              Đăng xuất
+            </Button>
+          </Box>
         </Toolbar>
       </AppBar>
       <Container maxWidth="xl" sx={{ mt: 3, mb: 4 }}>
-        {tab === 0 && <DashboardPage />}
-        {tab === 1 && <GoatListPage />}
-        {tab === 2 && <TransactionPage />}
+        <Suspense fallback={<PageLoader />}>
+          {tab === 0 && <DashboardPage />}
+          {tab === 1 && <GoatListPage />}
+          {tab === 2 && <TransactionPage />}
+        </Suspense>
       </Container>
+    </ErrorBoundary>
+  );
+}
+
+export default function App() {
+  return (
+    <ThemeProvider theme={theme}>
+      <SnackbarProvider>
+        <AuthProvider>
+          <AppShell />
+        </AuthProvider>
+      </SnackbarProvider>
     </ThemeProvider>
   );
 }

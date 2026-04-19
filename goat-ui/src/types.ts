@@ -30,9 +30,18 @@ export interface GoatLog {
   weight: number | null;
   price: number | null;
   medicine: string | null;
+  nextDueDate: string | null;
   note: string | null;
   date: string | null;      // ngày thực tế của hành động, dùng cho thống kê
   createdAt: string;
+}
+
+export interface VaccineDueItem {
+  goatId: string;
+  goatCode: string;
+  medicine: string;
+  nextDueDate: string;
+  daysLeft: number;
 }
 
 export const GENDER_LABEL: Record<GoatGender, string> = {

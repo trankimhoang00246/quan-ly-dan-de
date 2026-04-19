@@ -1,6 +1,9 @@
 package com.farm.goat.service;
 
 import com.farm.goat.dto.*;
+import com.farm.goat.dto.TransactionRequest;
+import java.time.temporal.ChronoUnit;
+import java.util.Map;
 import com.farm.goat.model.Goat;
 import com.farm.goat.model.GoatLog;
 import com.farm.goat.repository.GoatLogRepository;
@@ -81,6 +84,7 @@ public class GoatService {
     }
 
     public Goat updateWeight(String id, UpdateWeightRequest req) {
+        if (req.weight() == null || req.weight() <= 0) throw new RuntimeException("Cân nặng phải lớn hơn 0");
         Goat goat = getGoat(id);
         if (!"ALIVE".equals(goat.getStatus())) throw new RuntimeException("Chỉ cập nhật cân cho dê còn sống");
         goat.setCurrentWeight(req.weight());
@@ -91,6 +95,8 @@ public class GoatService {
     }
 
     public Goat sell(String id, SellRequest req) {
+        if (req.price() == null || req.price() < 0) throw new RuntimeException("Giá bán không hợp lệ");
+        if (req.weight() != null && req.weight() <= 0) throw new RuntimeException("Cân nặng phải lớn hơn 0");
         Goat goat = getGoat(id);
         if (!"ALIVE".equals(goat.getStatus())) throw new RuntimeException("Dê không còn sống");
         goat.setStatus("SOLD");
@@ -112,6 +118,8 @@ public class GoatService {
     }
 
     public Goat slaughter(String id, SlaughterRequest req) {
+        if (req.price() == null || req.price() < 0) throw new RuntimeException("Giá bán không hợp lệ");
+        if (req.weight() != null && req.weight() <= 0) throw new RuntimeException("Cân nặng phải lớn hơn 0");
         Goat goat = getGoat(id);
         if (!"ALIVE".equals(goat.getStatus())) throw new RuntimeException("Dê không còn sống");
         goat.setStatus("SLAUGHTERED");
@@ -135,6 +143,7 @@ public class GoatService {
     public Goat chichThuoc(String id, ChichThuocRequest req) {
         Goat goat = getGoat(id);
         if (!"ALIVE".equals(goat.getStatus())) throw new RuntimeException("Dê không còn sống");
+        LocalDate date = req.date() != null ? req.date() : LocalDate.now();
         goat.setUpdatedAt(LocalDateTime.now());
         goatRepo.save(goat);
         GoatLog log = new GoatLog();
@@ -142,10 +151,58 @@ public class GoatService {
         log.setAction("CHICH_THUOC");
         log.setMedicine(req.medicine());
         log.setNote(req.note());
-        log.setDate(req.date() != null ? req.date() : LocalDate.now());
+        log.setDate(date);
+        log.setNextDueDate(req.nextDueDate());
         log.setCreatedAt(LocalDateTime.now());
         logRepo.save(log);
+        // Auto-create expense transaction if cost provided
+        if (req.cost() != null && req.cost() > 0) {
+            transactionService.create(new TransactionRequest(
+                    "Thuốc chích dê #" + goat.getCode() + ": " + req.medicine(),
+                    req.cost(), "EXPENSE", date, req.note()));
+        }
         return goat;
+    }
+
+    public List<Goat> getNeedsWeight(int days) {
+        List<Goat> alive = goatRepo.findByStatusOrderByCreatedAtDesc("ALIVE");
+        LocalDate cutoff = LocalDate.now().minusDays(days);
+        // Get latest weight log per goat
+        Map<String, LocalDate> latestWeightDate = new java.util.HashMap<>();
+        logRepo.findByActionIn(List.of("CREATE", "UPDATE_WEIGHT")).forEach(l -> {
+            if (l.getWeight() != null) {
+                LocalDate d = l.getDate() != null ? l.getDate() : l.getCreatedAt().toLocalDate();
+                latestWeightDate.merge(l.getGoatId(), d, (a, b) -> a.isAfter(b) ? a : b);
+            }
+        });
+        return alive.stream()
+                .filter(g -> {
+                    LocalDate latest = latestWeightDate.get(g.getId());
+                    return latest == null || latest.isBefore(cutoff);
+                })
+                .collect(Collectors.toList());
+    }
+
+    public List<VaccineDueItem> getVaccineDue(int days) {
+        LocalDate today = LocalDate.now();
+        LocalDate until = today.plusDays(days);
+        List<GoatLog> dueLogs = logRepo
+                .findByActionAndNextDueDateBetweenOrderByNextDueDateAsc("CHICH_THUOC", today, until);
+
+        // Chỉ lấy log mới nhất theo từng goatId
+        Map<String, GoatLog> latestPerGoat = new java.util.LinkedHashMap<>();
+        for (GoatLog log : dueLogs) {
+            latestPerGoat.putIfAbsent(log.getGoatId(), log);
+        }
+
+        return latestPerGoat.values().stream()
+                .map(log -> {
+                    String code = goatRepo.findById(log.getGoatId())
+                            .map(Goat::getCode).orElse("?");
+                    long daysLeft = ChronoUnit.DAYS.between(today, log.getNextDueDate());
+                    return new VaccineDueItem(log.getGoatId(), code, log.getMedicine(), log.getNextDueDate(), daysLeft);
+                })
+                .collect(Collectors.toList());
     }
 
     public void deleteGoat(String id) {

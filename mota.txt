@@ -18,3 +18,6 @@ Frontend react thu mục goat-ui
  - Backend: cd goat && ./gradlew clean bootRun                                                                 
   - Frontend: cd goat-ui && npm run dev                                                                   
   - Mở trình duyệt: http://localhost:5173   
+
+
+  admin / admin123 

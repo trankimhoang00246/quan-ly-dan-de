@@ -10,28 +10,28 @@ Goat farm management system (Quản Lý Đàn Dê) — a full-stack app to track
 
 Two-tier application:
 
-- **`goat/`** — Java 21 + Spring Boot 4.x REST API on port 8080, backed by local MongoDB (`mongodb://localhost:27017/goat`)
+- **`goat/`** — Java 21 + Spring Boot 4.x REST API on port 8080, backed by local MongoDB (`mongodb+srv://hoang:%40Hoang17102003@cluster0.t6ogryb.mongodb.net/goat?appName=Cluster0`)
 - **`goat-ui/`** — React 19 + TypeScript + Vite frontend on port 5173, communicating with the backend via `goat-ui/src/api.ts`
 
 ### Backend structure (`com.farm.goat`)
 
-| Package | Role |
-|---|---|
-| `controller/` | REST endpoints (GoatController) |
-| `service/` | Business logic (GoatService) |
-| `model/` | MongoDB documents (Goat, GoatLog) |
-| `repository/` | Spring Data MongoDB repositories |
-| `dto/` | Request body DTOs (Create, Sell, Dead, Slaughter, UpdateWeight) |
-| `config/` | CORS configuration |
+| Package       | Role                                                            |
+| ------------- | --------------------------------------------------------------- |
+| `controller/` | REST endpoints (GoatController)                                 |
+| `service/`    | Business logic (GoatService)                                    |
+| `model/`      | MongoDB documents (Goat, GoatLog)                               |
+| `repository/` | Spring Data MongoDB repositories                                |
+| `dto/`        | Request body DTOs (Create, Sell, Dead, Slaughter, UpdateWeight) |
+| `config/`     | CORS configuration                                              |
 
 ### Frontend structure (`goat-ui/src/`)
 
-| File/Dir | Role |
-|---|---|
-| `App.tsx` | Router with 3 routes: `/`, `/new`, `/goat/:id` |
-| `pages/` | GoatListPage, GoatFormPage, GoatDetailPage |
-| `api.ts` | All fetch calls to the backend |
-| `types.ts` | TypeScript interfaces and label mappings |
+| File/Dir   | Role                                           |
+| ---------- | ---------------------------------------------- |
+| `App.tsx`  | Router with 3 routes: `/`, `/new`, `/goat/:id` |
+| `pages/`   | GoatListPage, GoatFormPage, GoatDetailPage     |
+| `api.ts`   | All fetch calls to the backend                 |
+| `types.ts` | TypeScript interfaces and label mappings       |
 
 ## Commands
 

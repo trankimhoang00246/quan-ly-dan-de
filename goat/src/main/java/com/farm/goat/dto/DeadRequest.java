@@ -1,3 +1,5 @@
 package com.farm.goat.dto;
 
-public record DeadRequest(Double price, Double weight, String note) {}
+import java.time.LocalDate;
+
+public record DeadRequest(Double price, Double weight, String note, LocalDate date) {}

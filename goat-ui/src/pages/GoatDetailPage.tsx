@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
 import { type Goat, type GoatLog, GENDER_LABEL, LABEL_LABEL, STATUS_LABEL, STATUS_COLOR, ACTION_LABEL } from '../types';
+import GoatActionDialog, { type GoatActionType } from '../components/GoatActionDialog';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, DialogContentText,
   Button, IconButton, Box, Stack, Chip,
   Table, TableHead, TableRow, TableCell, TableBody, Paper,
-  TextField, Alert, CircularProgress,
+  Alert, CircularProgress,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -14,15 +15,6 @@ import SellIcon from '@mui/icons-material/Sell';
 import HeartBrokenIcon from '@mui/icons-material/HeartBroken';
 import SetMealIcon from '@mui/icons-material/SetMeal';
 import DeleteIcon from '@mui/icons-material/Delete';
-
-type ModalType = 'weight' | 'sell' | 'dead' | 'slaughter' | null;
-
-const ACTION_CONFIG: Record<NonNullable<ModalType>, { label: string }> = {
-  weight: { label: 'Cập nhật cân' },
-  sell:   { label: 'Bán dê' },
-  dead:   { label: 'Ghi nhận dê chết' },
-  slaughter: { label: 'Làm thịt dê' },
-};
 
 interface Props { id: string; onClose: () => void; }
 
@@ -38,12 +30,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
 
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [modal, setModal] = useState<ModalType>(null);
-  const [mWeight, setMWeight] = useState('');
-  const [mPrice, setMPrice] = useState('');
-  const [mNote, setMNote] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [mError, setMError] = useState('');
+  const [modal, setModal] = useState<GoatActionType | null>(null);
 
   const navigateTo = (targetId: string) => setIdStack(prev => [...prev, targetId]);
   const goBack = () => setIdStack(prev => prev.slice(0, -1));
@@ -65,24 +52,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
       .finally(() => setLoading(false));
   }, [currentId]);
 
-  const openModal = (t: ModalType) => {
-    setModal(t); setMWeight(''); setMPrice(''); setMNote(''); setMError('');
-  };
-
-  const handleAction = async () => {
-    if (!modal) return;
-    if (modal === 'weight' && !mWeight) { setMError('Vui lòng nhập cân nặng'); return; }
-    setSaving(true); setMError('');
-    try {
-      const body = { weight: mWeight ? Number(mWeight) : null, price: mPrice ? Number(mPrice) : null, note: mNote.trim() || null };
-      if (modal === 'weight') await api.updateWeight(currentId, { weight: Number(mWeight), note: mNote.trim() || null });
-      else if (modal === 'sell') await api.sell(currentId, body);
-      else if (modal === 'dead') await api.markDead(currentId, body);
-      else if (modal === 'slaughter') await api.slaughter(currentId, body);
-      setModal(null); reload();
-    } catch (e: unknown) { setMError(e instanceof Error ? e.message : String(e)); }
-    finally { setSaving(false); }
-  };
+  const openModal = (t: GoatActionType) => setModal(t);
 
   const fmtMoney = (v: number | null) => v != null ? v.toLocaleString('vi-VN') + ' đ' : '-';
   const fmtDate = (s: string) => new Date(s).toLocaleString('vi-VN');
@@ -143,7 +113,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                       ? <Box component="span" sx={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline', fontWeight: 600 }} onClick={() => navigateTo(goat.motherId!)}>{goat.motherCode}</Box>
                       : <Box component="span" sx={{ fontWeight: 600 }}>{goat.motherCode ?? '-'}</Box>}
                   </Box>
-                  <InfoItem label="Ngày tạo" value={fmtDate(goat.createdAt)} />
+                  <InfoItem label="Ngày nhập/sinh" value={goat.date ? new Date(goat.date).toLocaleDateString('vi-VN') : fmtDate(goat.createdAt)} />
                   <InfoItem label="Cập nhật" value={fmtDate(goat.updatedAt)} />
                   {goat.note && <InfoItem label="Ghi chú" value={goat.note} />}
                 </Box>
@@ -187,7 +157,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                                 sx={{ bgcolor: STATUS_COLOR[child.status], color: '#fff', fontWeight: 600 }} />
                             </TableCell>
                             <TableCell sx={{ fontSize: 13, color: 'text.secondary' }}>
-                              {new Date(child.createdAt).toLocaleDateString('vi-VN')}
+                              {new Date(child.date ?? child.createdAt).toLocaleDateString('vi-VN')}
                             </TableCell>
                             <TableCell>
                               <Button size="small" onClick={() => navigateTo(child.id)}>Xem</Button>
@@ -207,7 +177,7 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                   <Table size="small">
                     <TableHead sx={{ bgcolor: 'grey.100' }}>
                       <TableRow>
-                        {['Thời gian', 'Hành động', 'Cân (kg)', 'Tiền (đ)', 'Ghi chú'].map(h => (
+                        {['Ngày thực tế', 'Hành động', 'Cân (kg)', 'Tiền (đ)', 'Ghi chú'].map(h => (
                           <TableCell key={h} sx={{ fontWeight: 700 }}>{h}</TableCell>
                         ))}
                       </TableRow>
@@ -223,7 +193,9 @@ export default function GoatDetailModal({ id, onClose }: Props) {
                       {logs.map(log => (
                         <TableRow key={log.id} hover>
                           <TableCell sx={{ fontSize: 13, color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                            {fmtDate(log.createdAt)}
+                            {log.date
+                              ? new Date(log.date).toLocaleDateString('vi-VN')
+                              : fmtDate(log.createdAt)}
                           </TableCell>
                           <TableCell><strong>{ACTION_LABEL[log.action]}</strong></TableCell>
                           <TableCell>{log.weight != null ? log.weight : '-'}</TableCell>
@@ -263,34 +235,12 @@ export default function GoatDetailModal({ id, onClose }: Props) {
         </DialogActions>
       </Dialog>
 
-      {/* Action dialog */}
-      <Dialog open={!!modal} onClose={() => setModal(null)} maxWidth="xs" fullWidth>
-        <DialogTitle>{modal ? ACTION_CONFIG[modal].label : ''}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {mError && <Alert severity="error">{mError}</Alert>}
-            <TextField
-              label={modal === 'weight' ? 'Cân nặng mới (kg) *' : 'Cân (kg)'}
-              type="number" size="small" fullWidth
-              value={mWeight} onChange={e => setMWeight(e.target.value)}
-              slotProps={{ htmlInput: { step: 0.1, min: 0 } }}
-            />
-            {(modal === 'sell' || modal === 'dead' || modal === 'slaughter') && (
-              <TextField label="Tiền bán (đ)" type="number" size="small" fullWidth
-                value={mPrice} onChange={e => setMPrice(e.target.value)}
-                slotProps={{ htmlInput: { min: 0 } }} />
-            )}
-            <TextField label="Ghi chú" size="small" fullWidth
-              value={mNote} onChange={e => setMNote(e.target.value)} />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setModal(null)}>Hủy</Button>
-          <Button variant="contained" color="primary" disabled={saving} onClick={handleAction}>
-            {saving ? 'Đang lưu...' : 'Xác nhận'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <GoatActionDialog
+        goatId={modal ? currentId : null}
+        actionType={modal}
+        onClose={() => setModal(null)}
+        onSuccess={() => { setModal(null); reload(); }}
+      />
     </>
   );
 }

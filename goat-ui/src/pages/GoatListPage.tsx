@@ -3,6 +3,7 @@ import { api } from '../api';
 import { type Goat, GENDER_LABEL, LABEL_LABEL, STATUS_LABEL, STATUS_COLOR } from '../types';
 import GoatFormModal from './GoatFormPage';
 import GoatDetailModal from './GoatDetailPage';
+import GoatActionDialog, { type GoatActionType } from '../components/GoatActionDialog';
 import {
   Box, Tabs, Tab, TextField, Button, Table, TableHead, TableRow, TableCell,
   TableBody, Chip, IconButton, Tooltip, Dialog, DialogTitle, DialogContent,
@@ -18,14 +19,6 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import HeartBrokenIcon from '@mui/icons-material/HeartBroken';
 import SetMealIcon from '@mui/icons-material/SetMeal';
 
-type ActionType = 'weight' | 'sell' | 'dead' | 'slaughter';
-
-const ACTION_CONFIG: Record<ActionType, { label: string }> = {
-  weight: { label: 'Cập nhật cân' },
-  sell:   { label: 'Bán dê' },
-  dead:   { label: 'Ghi nhận chết' },
-  slaughter: { label: 'Làm thịt' },
-};
 
 export default function GoatListPage() {
   const [herdGoats, setHerdGoats] = useState<Goat[]>([]);
@@ -42,33 +35,12 @@ export default function GoatListPage() {
   const [deleting, setDeleting] = useState(false);
 
   const [actionGoatId, setActionGoatId] = useState<string | null>(null);
-  const [actionType, setActionType] = useState<ActionType | null>(null);
-  const [mWeight, setMWeight] = useState('');
-  const [mPrice, setMPrice] = useState('');
-  const [mNote, setMNote] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [mError, setMError] = useState('');
+  const [actionType, setActionType] = useState<GoatActionType | null>(null);
 
-  const openAction = (goatId: string, type: ActionType) => {
+  const openAction = (goatId: string, type: GoatActionType) => {
     setActionGoatId(goatId); setActionType(type);
-    setMWeight(''); setMPrice(''); setMNote(''); setMError('');
   };
   const closeAction = () => { setActionGoatId(null); setActionType(null); };
-
-  const handleAction = async () => {
-    if (!actionGoatId || !actionType) return;
-    if (actionType === 'weight' && !mWeight) { setMError('Vui lòng nhập cân nặng'); return; }
-    setSaving(true); setMError('');
-    try {
-      const body = { weight: mWeight ? Number(mWeight) : null, price: mPrice ? Number(mPrice) : null, note: mNote.trim() || null };
-      if (actionType === 'weight') await api.updateWeight(actionGoatId, { weight: Number(mWeight), note: mNote.trim() || null });
-      else if (actionType === 'sell') await api.sell(actionGoatId, body);
-      else if (actionType === 'dead') await api.markDead(actionGoatId, body);
-      else if (actionType === 'slaughter') await api.slaughter(actionGoatId, body);
-      closeAction(); loadGoats();
-    } catch (e: unknown) { setMError(e instanceof Error ? e.message : String(e)); }
-    finally { setSaving(false); }
-  };
 
   const loadGoats = () => {
     setLoading(true);
@@ -192,7 +164,7 @@ export default function GoatListPage() {
                   </TableCell>
                 )}
                 <TableCell sx={{ fontSize: 13, color: 'text.secondary', whiteSpace: 'nowrap' }}>
-                  {new Date(isHerd ? goat.createdAt : goat.updatedAt).toLocaleString('vi-VN')}
+                  {new Date(isHerd ? (goat.date ?? goat.createdAt) : goat.updatedAt).toLocaleDateString('vi-VN')}
                 </TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={0.5} sx={{ flexWrap: 'wrap' }}>
@@ -263,7 +235,7 @@ export default function GoatListPage() {
             onClick={async () => {
               setDeleting(true);
               try { await api.deleteGoat(deleteGoatId!); setDeleteGoatId(null); loadGoats(); }
-              catch (e: unknown) { setMError(e instanceof Error ? e.message : String(e)); setDeleteGoatId(null); }
+              catch (e: unknown) { setError(e instanceof Error ? e.message : String(e)); setDeleteGoatId(null); }
               finally { setDeleting(false); }
             }}>
             {deleting ? 'Đang xóa...' : 'Xóa'}
@@ -271,38 +243,12 @@ export default function GoatListPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Action dialog */}
-      <Dialog open={!!actionGoatId && !!actionType} onClose={closeAction} maxWidth="xs" fullWidth>
-        <DialogTitle>{actionType ? ACTION_CONFIG[actionType].label : ''}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            {mError && <Alert severity="error">{mError}</Alert>}
-            <TextField
-              label={actionType === 'weight' ? 'Cân nặng mới (kg) *' : 'Cân (kg)'}
-              type="number" size="small" fullWidth
-              value={mWeight} onChange={e => setMWeight(e.target.value)}
-              slotProps={{ htmlInput: { step: 0.1, min: 0 } }}
-            />
-            {(actionType === 'sell' || actionType === 'dead' || actionType === 'slaughter') && (
-              <TextField
-                label="Tiền bán (đ)" type="number" size="small" fullWidth
-                value={mPrice} onChange={e => setMPrice(e.target.value)}
-                slotProps={{ htmlInput: { min: 0 } }}
-              />
-            )}
-            <TextField
-              label="Ghi chú" size="small" fullWidth
-              value={mNote} onChange={e => setMNote(e.target.value)}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeAction}>Hủy</Button>
-          <Button variant="contained" color="primary" disabled={saving} onClick={handleAction}>
-            {saving ? 'Đang lưu...' : 'Xác nhận'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <GoatActionDialog
+        goatId={actionGoatId}
+        actionType={actionType}
+        onClose={closeAction}
+        onSuccess={() => { closeAction(); loadGoats(); }}
+      />
     </Box>
   );
 }

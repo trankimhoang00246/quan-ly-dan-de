@@ -63,6 +63,7 @@ public class GoatService {
         }
         goat.setNote(req.note());
         goat.setStatus("ALIVE");
+        goat.setDate(req.date() != null ? req.date() : LocalDate.now());
         goat.setCreatedAt(LocalDateTime.now());
         goat.setUpdatedAt(LocalDateTime.now());
         Goat savedGoat = goatRepo.save(goat);
@@ -74,7 +75,7 @@ public class GoatService {
         if (req.note() != null && !req.note().isBlank()) {
             logNote += " - " + req.note();
         }
-        saveLog(savedGoat.getId(), "CREATE", req.currentWeight(), req.capital(), logNote);
+        saveLog(savedGoat.getId(), "CREATE", req.currentWeight(), req.capital(), logNote, savedGoat.getDate());
         return savedGoat;
     }
 
@@ -84,7 +85,7 @@ public class GoatService {
         goat.setCurrentWeight(req.weight());
         goat.setUpdatedAt(LocalDateTime.now());
         goatRepo.save(goat);
-        saveLog(id, "UPDATE_WEIGHT", req.weight(), null, req.note());
+        saveLog(id, "UPDATE_WEIGHT", req.weight(), null, req.note(), req.date() != null ? req.date() : LocalDate.now());
         return goat;
     }
 
@@ -95,7 +96,7 @@ public class GoatService {
         if (req.weight() != null) goat.setCurrentWeight(req.weight());
         goat.setUpdatedAt(LocalDateTime.now());
         goatRepo.save(goat);
-        saveLog(id, "SELL", req.weight(), req.price(), req.note());
+        saveLog(id, "SELL", req.weight(), req.price(), req.note(), req.date() != null ? req.date() : LocalDate.now());
         return goat;
     }
 
@@ -105,7 +106,7 @@ public class GoatService {
         goat.setStatus("DEAD");
         goat.setUpdatedAt(LocalDateTime.now());
         goatRepo.save(goat);
-        saveLog(id, "DEAD", req.weight(), req.price(), req.note());
+        saveLog(id, "DEAD", req.weight(), req.price(), req.note(), req.date() != null ? req.date() : LocalDate.now());
         return goat;
     }
 
@@ -115,7 +116,7 @@ public class GoatService {
         goat.setStatus("SLAUGHTERED");
         goat.setUpdatedAt(LocalDateTime.now());
         goatRepo.save(goat);
-        saveLog(id, "SLAUGHTER", req.weight(), req.price(), req.note());
+        saveLog(id, "SLAUGHTER", req.weight(), req.price(), req.note(), req.date() != null ? req.date() : LocalDate.now());
         return goat;
     }
 
@@ -138,12 +139,11 @@ public class GoatService {
     }
 
     public DashboardStats getDashboardStats(LocalDate from, LocalDate to) {
-        LocalDateTime fromDt = from != null ? from.atStartOfDay() : null;
-        LocalDateTime toDt   = to   != null ? to.atTime(23, 59, 59) : null;
-
         List<Goat> all = goatRepo.findAllByOrderByCreatedAtDesc().stream()
-                .filter(g -> (fromDt == null || !g.getCreatedAt().isBefore(fromDt))
-                          && (toDt   == null || !g.getCreatedAt().isAfter(toDt)))
+                .filter(g -> {
+                    LocalDate d = g.getDate() != null ? g.getDate() : g.getCreatedAt().toLocalDate();
+                    return (from == null || !d.isBefore(from)) && (to == null || !d.isAfter(to));
+                })
                 .collect(Collectors.toList());
 
         int alive = 0, sold = 0, dead = 0, slaughtered = 0;
@@ -173,8 +173,10 @@ public class GoatService {
         double avgWeight = countWithWeight > 0 ? totalWeightAlive / countWithWeight : 0;
 
         double totalRevenue = logRepo.findByActionIn(List.of("SELL", "SLAUGHTER")).stream()
-                .filter(l -> (fromDt == null || !l.getCreatedAt().isBefore(fromDt))
-                          && (toDt   == null || !l.getCreatedAt().isAfter(toDt)))
+                .filter(l -> {
+                    LocalDate d = l.getDate() != null ? l.getDate() : l.getCreatedAt().toLocalDate();
+                    return (from == null || !d.isBefore(from)) && (to == null || !d.isAfter(to));
+                })
                 .mapToDouble(l -> l.getPrice() != null ? l.getPrice() : 0)
                 .sum();
 
@@ -187,13 +189,14 @@ public class GoatService {
                 otherExpenses, otherRevenue);
     }
 
-    private void saveLog(String goatId, String action, Double weight, Double price, String note) {
+    private void saveLog(String goatId, String action, Double weight, Double price, String note, LocalDate date) {
         GoatLog log = new GoatLog();
         log.setGoatId(goatId);
         log.setAction(action);
         log.setWeight(weight);
         log.setPrice(price);
         log.setNote(note);
+        log.setDate(date != null ? date : LocalDate.now());
         log.setCreatedAt(LocalDateTime.now());
         logRepo.save(log);
     }

@@ -1,5 +1,7 @@
 package com.farm.goat.dto;
 
+import java.time.LocalDate;
+
 public record CreateGoatRequest(
         String code,
         String gender,
@@ -8,5 +10,6 @@ public record CreateGoatRequest(
         Double capital,
         String fatherId,
         String motherId,
-        String note
+        String note,
+        LocalDate date
 ) {}

@@ -4,6 +4,7 @@ import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -16,5 +17,6 @@ public class GoatLog {
     private Double weight;
     private Double price;
     private String note;
+    private LocalDate date;       // ngày thực tế của hành động, dùng cho thống kê
     private LocalDateTime createdAt;
 }

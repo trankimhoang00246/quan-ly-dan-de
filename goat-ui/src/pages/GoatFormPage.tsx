@@ -14,9 +14,11 @@ interface Props {
 }
 
 export default function GoatFormModal({ onClose, onSuccess }: Props) {
+  const today = new Date().toISOString().split('T')[0];
   const [form, setForm] = useState({
     code: '', gender: 'MALE', label: 'BUON',
     currentWeight: '', capital: '', fatherId: '', motherId: '', note: '',
+    date: today,
   });
   const [goats, setGoats] = useState<{ id: string; code: string; gender: string }[]>([]);
   const [error, setError] = useState('');
@@ -46,6 +48,7 @@ export default function GoatFormModal({ onClose, onSuccess }: Props) {
         capital: form.capital ? Number(form.capital) : 0,
         fatherId: form.fatherId || null, motherId: form.motherId || null,
         note: form.note.trim() || null,
+        date: form.date || null,
       });
       onSuccess(goat.id);
     } catch (e: unknown) { setError(e instanceof Error ? e.message : String(e)); }
@@ -119,6 +122,12 @@ export default function GoatFormModal({ onClose, onSuccess }: Props) {
               slotProps={{ htmlInput: { min: 0, readOnly: !!hasParen } }}
               disabled={!!hasParen}
               helperText={hasParen ? 'Dê đẻ ra = 0đ' : undefined}
+            />
+
+            <TextField
+              label="Ngày nhập / ngày sinh" type="date" size="small" fullWidth
+              value={form.date} onChange={e => set('date', e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
             />
 
             <TextField

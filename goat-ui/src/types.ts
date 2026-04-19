@@ -16,6 +16,7 @@ export interface Goat {
   motherCode: string | null;
   status: GoatStatus;
   note: string | null;
+  date: string | null;      // ngày thực tế (nhập/sinh), dùng cho thống kê
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +28,7 @@ export interface GoatLog {
   weight: number | null;
   price: number | null;
   note: string | null;
+  date: string | null;      // ngày thực tế của hành động, dùng cho thống kê
   createdAt: string;
 }
 
